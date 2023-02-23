@@ -1,0 +1,8 @@
+#/bin/bash
+
+make ARCH=arm64 CROSS_COMPILE=/home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu- menuconfig
+
+cp .config arch/arm64/configs/kisan_s1_defconfig
+
+sync
+
