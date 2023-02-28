@@ -10,9 +10,9 @@
 // -I ./include/uapi -I ./include/generated/uapi
 // -iprefix /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/
 // -isysroot /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../aarch64-none-linux-gnu/libc
-// -D __KERNEL__ -D CC_USING_PATCHABLE_FUNCTION_ENTRY
-// -D KASAN_SHADOW_SCALE_SHIFT=3 -D CONFIG_CC_HAS_K_CONSTRAINT=1
-// -D ARM64_ASM_ARCH="armv8.4-a" -D KASAN_SHADOW_SCALE_SHIFT=3
+// -D __KERNEL__ -D KASAN_SHADOW_SCALE_SHIFT=3
+// -D CONFIG_CC_HAS_K_CONSTRAINT=1 -D ARM64_ASM_ARCH="armv8.4-a"
+// -D KASAN_SHADOW_SCALE_SHIFT=3
 // -D KBUILD_MODFILE="scripts/mod/devicetable-offsets"
 // -D KBUILD_BASENAME="devicetable_offsets"
 // -D KBUILD_MODNAME="devicetable_offsets"
@@ -27,7 +27,7 @@
 // -Werror=implicit-function-declaration -Werror=implicit-int
 // -Werror=return-type -Wno-format-security -Wno-psabi -Wno-frame-address
 // -Wformat-truncation=0 -Wformat-overflow=0 -Wno-address-of-packed-member
-// -Wframe-larger-than=1024 -Wimplicit-fallthrough=3
+// -Wframe-larger-than=2048 -Wimplicit-fallthrough=3
 // -Wno-unused-but-set-variable -Wunused-const-variable=0
 // -Wdeclaration-after-statement -Wvla -Wno-pointer-sign
 // -Wno-stringop-truncation -Wno-array-bounds -Wstringop-overflow=0
@@ -37,9 +37,9 @@
 // -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE
 // -fno-asynchronous-unwind-tables -fno-unwind-tables
 // -fno-delete-null-pointer-checks -fstack-protector-strong
-// -fno-omit-frame-pointer -fno-optimize-sibling-calls
-// -fpatchable-function-entry=2 -fno-strict-overflow -fstack-check=no
-// -fconserve-stack -fverbose-asm --param allow-store-data-races=0
+// -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-strict-overflow
+// -fstack-check=no -fconserve-stack -fverbose-asm
+// --param allow-store-data-races=0
 // options enabled:  -faggressive-loop-optimizations -falign-functions
 // -falign-jumps -falign-labels -falign-loops -fassume-phsa -fauto-inc-dec
 // -fbranch-count-reg -fcaller-saves -fcode-hoisting
@@ -53,8 +53,8 @@
 // -findirect-inlining -finline -finline-atomics
 // -finline-functions-called-once -finline-small-functions -fipa-bit-cp
 // -fipa-cp -fipa-icf -fipa-icf-functions -fipa-icf-variables -fipa-profile
-// -fipa-pure-const -fipa-reference -fipa-reference-addressable -fipa-sra
-// -fipa-stack-alignment -fipa-vrp -fira-hoist-pressure
+// -fipa-pure-const -fipa-ra -fipa-reference -fipa-reference-addressable
+// -fipa-sra -fipa-stack-alignment -fipa-vrp -fira-hoist-pressure
 // -fira-share-save-slots -fira-share-spill-slots
 // -fisolate-erroneous-paths-dereference -fivopts -fkeep-static-consts
 // -fleading-underscore -flifetime-dse -flra-remat -flto-odr-type-merging
@@ -91,12 +91,6 @@
 	.global	main
 	.type	main, %function
 main:
-	.section	__patchable_function_entries,"aw",@progbits
-	.8byte	.LPFE1
-	.section	.text.startup
-.LPFE1:
-	nop
-	nop
 	hint	25 // paciasp
 // scripts/mod/devicetable-offsets.c:11: 	DEVID(usb_device_id);
 #APP

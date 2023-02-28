@@ -10,11 +10,10 @@
 // -I ./include/uapi -I ./include/generated/uapi
 // -iprefix /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/
 // -isysroot /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../aarch64-none-linux-gnu/libc
-// -D __KERNEL__ -D CC_USING_PATCHABLE_FUNCTION_ENTRY
-// -D KASAN_SHADOW_SCALE_SHIFT=3 -D CONFIG_CC_HAS_K_CONSTRAINT=1
-// -D ARM64_ASM_ARCH="armv8.4-a" -D KASAN_SHADOW_SCALE_SHIFT=3
-// -D KBUILD_MODFILE="./asm-offsets" -D KBUILD_BASENAME="asm_offsets"
-// -D KBUILD_MODNAME="asm_offsets"
+// -D __KERNEL__ -D KASAN_SHADOW_SCALE_SHIFT=3
+// -D CONFIG_CC_HAS_K_CONSTRAINT=1 -D ARM64_ASM_ARCH="armv8.4-a"
+// -D KASAN_SHADOW_SCALE_SHIFT=3 -D KBUILD_MODFILE="./asm-offsets"
+// -D KBUILD_BASENAME="asm_offsets" -D KBUILD_MODNAME="asm_offsets"
 // -isystem /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/include
 // -include ./include/linux/kconfig.h
 // -include ./include/linux/compiler_types.h
@@ -26,7 +25,7 @@
 // -Werror=implicit-function-declaration -Werror=implicit-int
 // -Werror=return-type -Wno-format-security -Wno-psabi -Wno-frame-address
 // -Wformat-truncation=0 -Wformat-overflow=0 -Wno-address-of-packed-member
-// -Wframe-larger-than=1024 -Wimplicit-fallthrough=3
+// -Wframe-larger-than=2048 -Wimplicit-fallthrough=3
 // -Wno-unused-but-set-variable -Wunused-const-variable=0
 // -Wdeclaration-after-statement -Wvla -Wno-pointer-sign
 // -Wno-stringop-truncation -Wno-array-bounds -Wstringop-overflow=0
@@ -36,9 +35,9 @@
 // -fno-strict-aliasing -fno-common -fshort-wchar -fno-PIE
 // -fno-asynchronous-unwind-tables -fno-unwind-tables
 // -fno-delete-null-pointer-checks -fstack-protector-strong
-// -fno-omit-frame-pointer -fno-optimize-sibling-calls
-// -fpatchable-function-entry=2 -fno-strict-overflow -fstack-check=no
-// -fconserve-stack -fverbose-asm --param allow-store-data-races=0
+// -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-strict-overflow
+// -fstack-check=no -fconserve-stack -fverbose-asm
+// --param allow-store-data-races=0
 // options enabled:  -faggressive-loop-optimizations -falign-functions
 // -falign-jumps -falign-labels -falign-loops -fassume-phsa -fauto-inc-dec
 // -fbranch-count-reg -fcaller-saves -fcode-hoisting
@@ -52,8 +51,8 @@
 // -findirect-inlining -finline -finline-atomics
 // -finline-functions-called-once -finline-small-functions -fipa-bit-cp
 // -fipa-cp -fipa-icf -fipa-icf-functions -fipa-icf-variables -fipa-profile
-// -fipa-pure-const -fipa-reference -fipa-reference-addressable -fipa-sra
-// -fipa-stack-alignment -fipa-vrp -fira-hoist-pressure
+// -fipa-pure-const -fipa-ra -fipa-reference -fipa-reference-addressable
+// -fipa-sra -fipa-stack-alignment -fipa-vrp -fira-hoist-pressure
 // -fira-share-save-slots -fira-share-spill-slots
 // -fisolate-erroneous-paths-dereference -fivopts -fkeep-static-consts
 // -fleading-underscore -flifetime-dse -flra-remat -flto-odr-type-merging
@@ -90,18 +89,12 @@
 	.global	main
 	.type	main, %function
 main:
-	.section	__patchable_function_entries,"aw",@progbits
-	.8byte	.LPFE1
-	.section	.text.startup
-.LPFE1:
-	nop
-	nop
 	hint	25 // paciasp
 // arch/arm64/kernel/asm-offsets.c:29:   DEFINE(TSK_ACTIVE_MM,		offsetof(struct task_struct, active_mm));
 #APP
 // 29 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->TSK_ACTIVE_MM 1144 offsetof(struct task_struct, active_mm)"	//
+.ascii "->TSK_ACTIVE_MM 1152 offsetof(struct task_struct, active_mm)"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:30:   BLANK();
 // 30 "arch/arm64/kernel/asm-offsets.c" 1
@@ -131,7 +124,7 @@ main:
 // arch/arm64/kernel/asm-offsets.c:43:   DEFINE(TSK_STACK_CANARY,	offsetof(struct task_struct, stack_canary));
 // 43 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->TSK_STACK_CANARY 1320 offsetof(struct task_struct, stack_canary)"	//
+.ascii "->TSK_STACK_CANARY 1328 offsetof(struct task_struct, stack_canary)"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:45:   BLANK();
 // 45 "arch/arm64/kernel/asm-offsets.c" 1
@@ -141,17 +134,17 @@ main:
 // arch/arm64/kernel/asm-offsets.c:46:   DEFINE(THREAD_CPU_CONTEXT,	offsetof(struct task_struct, thread.cpu_context));
 // 46 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->THREAD_CPU_CONTEXT 2944 offsetof(struct task_struct, thread.cpu_context)"	//
+.ascii "->THREAD_CPU_CONTEXT 2496 offsetof(struct task_struct, thread.cpu_context)"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:48:   DEFINE(THREAD_KEYS_USER,	offsetof(struct task_struct, thread.keys_user));
 // 48 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->THREAD_KEYS_USER 3912 offsetof(struct task_struct, thread.keys_user)"	//
+.ascii "->THREAD_KEYS_USER 3464 offsetof(struct task_struct, thread.keys_user)"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:49:   DEFINE(THREAD_KEYS_KERNEL,	offsetof(struct task_struct, thread.keys_kernel));
 // 49 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->THREAD_KEYS_KERNEL 3992 offsetof(struct task_struct, thread.keys_kernel)"	//
+.ascii "->THREAD_KEYS_KERNEL 3544 offsetof(struct task_struct, thread.keys_kernel)"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:51:   BLANK();
 // 51 "arch/arm64/kernel/asm-offsets.c" 1
@@ -366,7 +359,7 @@ main:
 // arch/arm64/kernel/asm-offsets.c:95:   DEFINE(PREEMPT_DISABLE_OFFSET, PREEMPT_DISABLE_OFFSET);
 // 95 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->PREEMPT_DISABLE_OFFSET 0 PREEMPT_DISABLE_OFFSET"	//
+.ascii "->PREEMPT_DISABLE_OFFSET 1 PREEMPT_DISABLE_OFFSET"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:96:   BLANK();
 // 96 "arch/arm64/kernel/asm-offsets.c" 1
@@ -466,7 +459,7 @@ main:
 // arch/arm64/kernel/asm-offsets.c:132:   DEFINE(TRAMP_VALIAS,		TRAMP_VALIAS);
 // 132 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->TRAMP_VALIAS -4322258944 TRAMP_VALIAS"	//
+.ascii "->TRAMP_VALIAS -2199050539008 TRAMP_VALIAS"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:139:   DEFINE(PTRAUTH_USER_KEY_APIA,		offsetof(struct ptrauth_keys_user, apia));
 // 139 "arch/arm64/kernel/asm-offsets.c" 1
