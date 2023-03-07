@@ -24,7 +24,7 @@ sudo apt-get install libelf-dev dwarves
 
 SDK 설치 경로의 Makefile 과 Rules.make 파일을 참조하여 작성
 
-```cpp
+```bash
 #!/bin/bash
 
 PATH_PROJ=/home/yjhong/kisan/TI_AM6231
@@ -110,7 +110,7 @@ echo "### End AM6231 Auto Making Script ###"
 
 ## SD 카드 부팅 체크
 
-```cpp
+```bash
 root@am62xx-evm:~# dmesg
 [    0.000000] Booting Linux on physical CPU 0x0000000000 [0x410fd034]
 [    0.000000] Linux version 5.10.153 (root@ubuntu18) (aarch64-none-linux-gnu-gcc (GNU Toolchain for the A-profile Architecture 9.2-2019.12 (arm-9.10)) 9.2.1 20191025, GNU ld (GNU Toolchain for the A-profile Architecture 9.2-2019.12 (arm-9.10)) 2.33.1.20191209) #3 SMP PREEMPT Mon Mar 6 16:25:36 KST 2023
