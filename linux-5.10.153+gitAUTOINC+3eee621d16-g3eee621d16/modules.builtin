@@ -191,6 +191,7 @@ kernel/drivers/regulator/pwm-regulator.ko
 kernel/drivers/regulator/rk808-regulator.ko
 kernel/drivers/regulator/rohm-regulator.ko
 kernel/drivers/regulator/s2mps11.ko
+kernel/drivers/regulator/tps65219-regulator.ko
 kernel/drivers/reset/reset-ti-sci.ko
 kernel/drivers/reset/reset-ti-syscon.ko
 kernel/drivers/tty/n_null.ko
@@ -236,6 +237,7 @@ kernel/drivers/block/virtio_blk.ko
 kernel/drivers/misc/dma-buf-phys.ko
 kernel/drivers/mfd/bd9571mwv.ko
 kernel/drivers/mfd/cros_ec_dev.ko
+kernel/drivers/mfd/tps65219.ko
 kernel/drivers/mfd/mfd-core.ko
 kernel/drivers/mfd/axp20x.ko
 kernel/drivers/mfd/axp20x-i2c.ko
