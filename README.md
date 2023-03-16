@@ -20,6 +20,13 @@ sudo apt-get install build-essential autoconf automake bison flex libssl-dev bc 
 sudo apt-get install libelf-dev dwarves
 
 
+## 툴체인
+
+```bash
+wget https://developer.arm.com/-/media/Files/downloads/gnu-a/9.2-2019.12/binrel/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu.tar.xz
+```
+
+
 ## 빌드 스크립트
 
 SDK 설치 경로의 Makefile 과 Rules.make 파일을 참조하여 작성
