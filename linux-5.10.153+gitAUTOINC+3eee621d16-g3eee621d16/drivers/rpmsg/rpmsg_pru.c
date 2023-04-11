@@ -140,8 +140,16 @@ static ssize_t rpmsg_pru_write(struct file *filp, const char __user *buf,
 	}
 
 	ret = rpmsg_send(prudev->rpdev->ept, (void *)rpmsg_pru_buf, count);
-	if (ret)
+	if (ret) {
 		dev_err(prudev->dev, "rpmsg_send failed: %d\n", ret);
+	}
+	else {
+		//NOTE::2023-04-11
+		//src=1024, dst=30(remoteproc2/pru1), dst=31(remoteproc3/pru2)	
+		printk(KERN_DEBUG ">rpmsg: [src-%d, dst-%d] %ld, %s\n", 
+			prudev->rpdev->src, prudev->rpdev->dst,
+			count, rpmsg_pru_buf);
+	}
 
 	return ret ? ret : count;
 }
@@ -177,7 +185,7 @@ static const struct file_operations rpmsg_pru_fops = {
 static int rpmsg_pru_cb(struct rpmsg_device *rpdev, void *data, int len,
 			void *priv, u32 src)
 {
-	u32 length;
+	//u32 length;
 	struct rpmsg_pru_dev *prudev;
 
 	prudev = dev_get_drvdata(&rpdev->dev);
@@ -193,9 +201,17 @@ static int rpmsg_pru_cb(struct rpmsg_device *rpdev, void *data, int len,
 		return -ENOSPC;
 	}
 
+#if 1
+	//NOTE::2023-04-11
+	//src=1024, dst=30(remoteproc2/pru1), dst=31(remoteproc3/pru2)
+	printk(KERN_DEBUG "<rpmsg: [src-%d, dst-%d] %d, %s\n", 
+		prudev->rpdev->src, prudev->rpdev->dst,
+		len, (unsigned char *)data);
+#else
 	length = kfifo_in(&prudev->msg_fifo, data, len);
 	prudev->msg_len[prudev->msg_idx_wr] = length;
 	prudev->msg_idx_wr = (prudev->msg_idx_wr + 1) % MAX_FIFO_MSG;
+#endif
 
 	wake_up_interruptible(&prudev->wait_list);
 

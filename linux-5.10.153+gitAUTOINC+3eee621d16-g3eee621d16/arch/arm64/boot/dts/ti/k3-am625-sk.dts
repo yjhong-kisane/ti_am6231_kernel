@@ -39,6 +39,14 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&wlan_en_pins_default>;
 	};
+
+	kisan_common {
+		compatible = "kisan_common";
+		status = "okay";
+
+		UDP_PORT = <7890>;
+		SIG_NUM  = <44>;
+	};
 };
 
 &main_pmx0 {

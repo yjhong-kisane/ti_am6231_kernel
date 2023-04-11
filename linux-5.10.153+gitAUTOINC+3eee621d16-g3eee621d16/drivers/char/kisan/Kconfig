@@ -1,0 +1,21 @@
+#
+# AM623x Kisan System B/D Character Device Drivers 
+#
+
+menu "Kisan AM623x B/D Character Device Drivers"
+
+config KISAN_AM623x_CHAR
+	bool "Kisan AM623x Character Device Drivers"
+	default n
+	help
+	   Support Kisan AM623x Character Device Drivers.
+
+config KISAN_AM623x_COMMON
+    tristate "Kisan AM623x B/D Common Function"
+    depends on KISAN_AM623x_CHAR
+    default n
+    help
+       AM623x Kisan System B/D Common Function.
+
+endmenu
+

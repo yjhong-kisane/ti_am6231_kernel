@@ -54,7 +54,7 @@
 
 #define VM_EXEC 4 /* VM_EXEC */
 
-#define PAGE_SZ 4096 /* PAGE_SIZE */
+#define PAGE_SZ 65536 /* PAGE_SIZE */
 
 #define DMA_TO_DEVICE 1 /* DMA_TO_DEVICE */
 #define DMA_FROM_DEVICE 2 /* DMA_FROM_DEVICE */
@@ -79,7 +79,7 @@
 #define HIBERN_PBE_NEXT 16 /* offsetof(struct pbe, next) */
 #define ARM64_FTR_SYSVAL 24 /* offsetof(struct arm64_ftr_reg, sys_val) */
 
-#define TRAMP_VALIAS -2199050539008 /* TRAMP_VALIAS */
+#define TRAMP_VALIAS -137466544128 /* TRAMP_VALIAS */
 #define PTRAUTH_USER_KEY_APIA 0 /* offsetof(struct ptrauth_keys_user, apia) */
 #define PTRAUTH_USER_KEY_APIB 16 /* offsetof(struct ptrauth_keys_user, apib) */
 #define PTRAUTH_USER_KEY_APDA 32 /* offsetof(struct ptrauth_keys_user, apda) */

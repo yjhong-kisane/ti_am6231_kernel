@@ -334,7 +334,7 @@ main:
 // arch/arm64/kernel/asm-offsets.c:90:   DEFINE(PAGE_SZ,	       	PAGE_SIZE);
 // 90 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->PAGE_SZ 4096 PAGE_SIZE"	//
+.ascii "->PAGE_SZ 65536 PAGE_SIZE"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:91:   BLANK();
 // 91 "arch/arm64/kernel/asm-offsets.c" 1
@@ -459,7 +459,7 @@ main:
 // arch/arm64/kernel/asm-offsets.c:132:   DEFINE(TRAMP_VALIAS,		TRAMP_VALIAS);
 // 132 "arch/arm64/kernel/asm-offsets.c" 1
 	
-.ascii "->TRAMP_VALIAS -2199050539008 TRAMP_VALIAS"	//
+.ascii "->TRAMP_VALIAS -137466544128 TRAMP_VALIAS"	//
 // 0 "" 2
 // arch/arm64/kernel/asm-offsets.c:139:   DEFINE(PTRAUTH_USER_KEY_APIA,		offsetof(struct ptrauth_keys_user, apia));
 // 139 "arch/arm64/kernel/asm-offsets.c" 1

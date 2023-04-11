@@ -2982,6 +2982,13 @@ CONFIG_TCG_TIS_I2C_INFINEON=y
 # CONFIG_XILLYBUS is not set
 CONFIG_RANDOM_TRUST_CPU=y
 CONFIG_RANDOM_TRUST_BOOTLOADER=y
+
+#
+# Kisan AM623x B/D Character Device Drivers
+#
+CONFIG_KISAN_AM623x_CHAR=y
+CONFIG_KISAN_AM623x_COMMON=m
+# end of Kisan AM623x B/D Character Device Drivers
 # end of Character devices
 
 #
