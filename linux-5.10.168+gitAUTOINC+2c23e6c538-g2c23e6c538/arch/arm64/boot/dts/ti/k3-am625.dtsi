@@ -25,7 +25,7 @@
 				core1 {
 					cpu = <&cpu1>;
 				};
-
+#if 0
 				core2 {
 					cpu = <&cpu2>;
 				};
@@ -33,6 +33,7 @@
 				core3 {
 					cpu = <&cpu3>;
 				};
+#endif	// #if 0
 			};
 		};
 
@@ -68,6 +69,7 @@
 			clocks = <&k3_clks 136 0>;
 		};
 
+#if 0
 		cpu2: cpu@2 {
 			compatible = "arm,cortex-a53";
 			reg = <0x002>;
@@ -99,6 +101,7 @@
 			operating-points-v2 = <&a53_opp_table>;
 			clocks = <&k3_clks 138 0>;
 		};
+#endif	// #if 0
 	};
 
 	a53_opp_table: opp-table {
