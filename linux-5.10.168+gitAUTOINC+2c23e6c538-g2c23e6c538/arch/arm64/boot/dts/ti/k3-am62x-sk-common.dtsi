@@ -116,32 +116,41 @@
 	};
 
 	vdd_mmc1: regulator-3 {
+		// SoC eFuse Voltage(VPP=1.8V) Regulator Enable)
 		/* TPS22918DBVR */
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_mmc1";
+		pinctrl-names = "default";
+		pinctrl-0 = <&vdd_mmc1_pins_default>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-boot-on;
 		enable-active-high;
 		vin-supply = <&vcc_3v3_sys>;
-		gpio = <&exp1 3 GPIO_ACTIVE_HIGH>;
+		//gpio = <&exp1 3 GPIO_ACTIVE_HIGH>;		// VPP_LDO_EN (TLV75518PDQNR)
+		gpio = <&main_gpio0 32 GPIO_ACTIVE_HIGH>;	// VPP_1VP_EN (TLV75518PDBVR)
 	};
 
 	vdd_sd_dv: regulator-4 {
+		// SD Card IO Voltage Select
 		/* Output of TLV71033 */
 		compatible = "regulator-gpio";
-		regulator-name = "tlv71033";
+		//regulator-name = "tlv71033";
+		regulator-name = "tps65219-LDO1-SEL-SD";
 		pinctrl-names = "default";
 		pinctrl-0 = <&vdd_sd_dv_pins_default>;
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <3300000>;
 		regulator-boot-on;
 		vin-supply = <&vcc_5v0>;
-		gpios = <&main_gpio0 31 GPIO_ACTIVE_HIGH>;
+		//gpios = <&main_gpio0 31 GPIO_ACTIVE_HIGH>;	// VSEL_SD (TLV7103318QDSERQ1)
+		gpios = <&main_gpio0 42 GPIO_ACTIVE_HIGH>;		// VSEL_SD/VSEL_DDR
 		states = <1800000 0x0>,
 			 <3300000 0x1>;
 	};
 
+
+#if 0
 	vcc_1v8: regulator-7 {
 		/* output of TPS6282518DMQ */
 		compatible = "regulator-fixed";
@@ -153,12 +162,13 @@
 		regulator-boot-on;
 	};
 
+	// For TVL320AIC3106 Audio Codec (McASP1)
 	tlv320_mclk: clk-0 {
 		#clock-cells = <0>;
 		compatible = "fixed-clock";
 		clock-frequency = <12288000>;
 	};
-
+	
 	codec_audio: sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "AM62x-SKEVM";
@@ -225,6 +235,7 @@
 			};
 		};
 	};
+#endif	// #if 0
 };
 
 &main_pmx0 {
@@ -399,7 +410,16 @@
 
 	vdd_sd_dv_pins_default: vdd-sd-dv-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x07c, PIN_OUTPUT, 7) /* (P25) GPMC0_CLK.GPIO0_31 */
+			//AM62X_IOPAD(0x07c, PIN_OUTPUT, 7) 	/* (P25) GPMC0_CLK.GPIO0_31 */
+			/* L21 0x000f_40ac VSEL_SD/VSEL_DDR */
+			AM62X_IOPAD(0x0ac, PIN_OUTPUT, 7)		/* (L21) GPMC0_CSn1.GPIO0_42 */
+		>;
+	};
+
+	vdd_mmc1_pins_default: vdd-mmc1-pins-default {
+		pinctrl-single,pins = <
+			/* L23 0x000F_4084 VPP_1VP_EN */
+			AM62X_IOPAD(0x084, PIN_OUTPUT, 7)		/* (L23) GPMC0_ADVn_ALE.GPIO0_32 */
 		>;
 	};
 
@@ -477,6 +497,7 @@
 	pinctrl-0 = <&main_i2c0_pins_default>;
 	clock-frequency = <400000>;
 
+/*
 	typec_pd: usb-pd@3f {
 		compatible = "ti,tps6598x";
 		reg = <0x3f>;
@@ -496,8 +517,10 @@
 			};
 		};
 	};
+*/
 };
 
+#if 0
 &main_i2c1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c1_pins_default>;
@@ -579,6 +602,11 @@
 		DVDD-supply = <&vcc_1v8>;
 	};
 };
+#else
+&main_i2c1 {
+	status = "disabled";
+};
+#endif
 
 &main_i2c2 {
 	status = "disabled";
@@ -589,10 +617,13 @@
 };
 
 &sdhci0 {
+/*
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mmc0_pins_default>;
 	ti,driver-strength-ohm = <50>;
 	disable-wp;
+*/
+	status = "disabled";
 };
 
 &sdhci1 {
@@ -614,6 +645,7 @@
 };
 
 &usb0 {
+/*
 	#address-cells = <1>;
 	#size-cells = <0>;
 	usb-role-switch;
@@ -625,6 +657,8 @@
 			remote-endpoint = <&usb_con_hs>;
 		};
 	};
+*/
+	status = "disabled";
 };
 
 &usb1 {
@@ -634,23 +668,34 @@
 };
 
 &cpsw3g {
+	status = "disabled";
+	/*
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mdio1_pins_default
 		     &main_rgmii1_pins_default
 		     &main_rgmii2_pins_default>;
+	*/
 };
 
 &cpsw_port1 {
+	status = "disabled";
+	/*
 	phy-mode = "rgmii-rxid";
 	phy-handle = <&cpsw3g_phy0>;
+	*/
 };
 
 &cpsw_port2 {
+	status = "disabled";
+	/*
 	phy-mode = "rgmii-rxid";
 	phy-handle = <&cpsw3g_phy1>;
+	*/
 };
 
 &cpsw3g_mdio {
+	status = "disabled";
+	/*
 	cpsw3g_phy0: ethernet-phy@0 {
 		reg = <0>;
 		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
@@ -664,18 +709,25 @@
 		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
 		ti,min-output-impedance;
 	};
+	*/
 };
 
 &dss {
+	status = "disabled";
+	/*
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_dss0_pins_default>;
+	*/
 };
 
 &dss_ports {
+	status = "disabled";
+	/*
 	#address-cells = <1>;
 	#size-cells = <0>;
-
+	*/
 	/* VP2: DPI Output */
+	/*
 	port@1 {
 		reg = <1>;
 
@@ -683,12 +735,14 @@
 			remote-endpoint = <&sii9022_in>;
 		};
 	};
+	*/
 };
 
 &mcasp0 {
 	status = "disabled";
 };
 
+#if 0
 &mcasp1 {
 	status = "okay";
 	#sound-dai-cells = <0>;
@@ -708,6 +762,11 @@
 	tx-num-evt = <32>;
 	rx-num-evt = <32>;
 };
+#else
+&mcasp1 {
+	status = "disabled";
+};
+#endif
 
 &mcasp2 {
 	status = "disabled";
@@ -726,8 +785,11 @@
 };
 
 &ospi0 {
+	status = "disabled";
+	/*
 	pinctrl-names = "default";
 	pinctrl-0 = <&ospi0_pins_default>;
+	*/
 };
 
 &mcu_m4fss {
