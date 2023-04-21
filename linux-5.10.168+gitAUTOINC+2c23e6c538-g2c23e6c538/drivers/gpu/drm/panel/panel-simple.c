@@ -448,6 +448,24 @@ static int panel_dpi_probe(struct device *dev,
 	/* We do not know the connector for the DT node, so guess it */
 	desc->connector_type = DRM_MODE_CONNECTOR_DPI;
 
+//=================================================================================================================================
+	// NOTE::2023-04-21
+	// 아래 부팅 시 이슈 해결을 위해 bus_format 과 bpc 에 값을 하드코딩하여 조치
+	//[    1.302036] panel-simple display: Specify missing bus_format
+	//[    1.307686] panel-simple display: Expected bpc in {6,8} but got: 0
+	
+	// 참고 링크
+	//https://www.spinics.net/lists/arm-kernel/msg956457.html
+	//https://lore.kernel.org/lkml/20220628181838.2031-1-max.oss.09@gmail.com/T/
+
+	desc->bus_format = MEDIA_BUS_FMT_RGB565_1X16;
+	desc->bpc = 6;
+
+	dev_warn(dev, "Set Connector Type : DRM_MODE_CONNECTOR_DPI\n");
+	dev_warn(dev, "Set Bus Format     : MEDIA_BUS_FMT_RGB565_1X16\n");
+	dev_warn(dev, "Set Bits Per Color : 6\n");
+//=================================================================================================================================
+
 	panel->desc = desc;
 
 	return 0;
