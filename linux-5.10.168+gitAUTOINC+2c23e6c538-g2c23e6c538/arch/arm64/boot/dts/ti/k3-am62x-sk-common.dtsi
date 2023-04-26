@@ -497,6 +497,13 @@
 			AM62X_IOPAD(0x194, PIN_OUTPUT, 7)	/* (B19) MCASP0_AXR3.GPIO1_7 */
 		>;
 	};
+
+	touch_intr_pins_default: touch-intr-pins-default{
+		pinctrl-single,pins = <
+			// L24 0x000f_4088 TOUCH_INT
+			AM62X_IOPAD(0x088, PIN_INPUT, 7)	// (L24) GPMC0_OEn_REn.GPIO0_33
+		>;
+	};
 };
 
 &wkup_uart0 {
@@ -675,12 +682,12 @@
 };
 
 
-#if 0
 &main_i2c1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c1_pins_default>;
 	clock-frequency = <100000>;
 
+	/*
 	exp1: gpio@22 {
 		compatible = "ti,tca6424";
 		reg = <0x22>;
@@ -747,25 +754,38 @@
 		#sound-dai-cells = <0>;
 		compatible = "ti,tlv320aic3106";
 		reg = <0x1b>;
-		ai3x-micbias-vg = <1>;		/* 2.0V */
+		ai3x-micbias-vg = <1>;		// 2.0V
 		status = "okay";
 
-		/* Regulators */
+		// Regulators
 		AVDD-supply = <&vcc_3v3_sys>;
 		IOVDD-supply = <&vcc_3v3_sys>;
 		DRVDD-supply = <&vcc_3v3_sys>;
 		DVDD-supply = <&vcc_1v8>;
 	};
+	*/
 };
-#else
-&main_i2c1 {
-	status = "disabled";
-};
-#endif
+
 
 &main_i2c2 {
-	status = "disabled";
+    pinctrl-names = "default";
+    pinctrl-0 = <&main_i2c2_pins_default>;
+    clock-frequency = <1000>;   // 1 kHz        // NT3 *****
+	//clock-frequency = <300>;    // 0.3 kHz        // For K2A
+
+    ar1021: ar1021@4d {
+		compatible = "microchip,ar1021-i2c";
+        reg = <0x4d>;
+
+        // L24 GPMC0_OEn_REn.GPIO0_33 TOUCH_INT
+		interrupt-parent = <&main_gpio0>;
+        interrupts = <33 IRQ_TYPE_EDGE_RISING>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_intr_pins_default>;
+    };
 };
+
 
 &main_i2c3 {
 	status = "disabled";
