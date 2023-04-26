@@ -17,8 +17,7 @@
 	compatible =  "ti,am625-sk", "ti,am625";
 	model = "Texas Instruments AM625 SK";
 
-
- #if 0
+	/*
 	wlan_lten: regulator-5 {
 		compatible = "regulator-fixed";
 		regulator-name = "wlan_lten";
@@ -30,7 +29,7 @@
 	};
 
 	wlan_en: regulator-6 {
-		/* OUTPUT of SN74AVC2T244DQMR */
+		// OUTPUT of SN74AVC2T244DQMR
 		compatible = "regulator-fixed";
 		regulator-name = "wlan_en";
 		regulator-min-microvolt = <1800000>;
@@ -41,8 +40,7 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&wlan_en_pins_default>;
 	};
-#endif	// #if 0
-
+	*/
 
 	opp-table {
 		/* Add 1.4GHz OPP for am625-sk board. Requires VDD_CORE to be at 0.85V */
@@ -55,37 +53,37 @@
 };
 
 &main_pmx0 {
-#if 0
+	/*
 	wlan_en_pins_default: wlan-en-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x124, PIN_OUTPUT, 7) /* (A23) MMC2_SDCD.GPIO0_71 */
+			AM62X_IOPAD(0x124, PIN_OUTPUT, 7) // (A23) MMC2_SDCD.GPIO0_71
 		>;
 	};
 
 	main_mmc2_pins_default: main-mmc2-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x120, PIN_INPUT, 0) /* (C24) MMC2_CMD */
-			AM62X_IOPAD(0x118, PIN_INPUT, 0) /* (D25) MMC2_CLK */
-			AM62X_IOPAD(0x114, PIN_INPUT, 0) /* (B24) MMC2_DAT0 */
-			AM62X_IOPAD(0x110, PIN_INPUT, 0) /* (C25) MMC2_DAT1 */
-			AM62X_IOPAD(0x10c, PIN_INPUT, 0) /* (E23) MMC2_DAT2 */
-			AM62X_IOPAD(0x108, PIN_INPUT, 0) /* (D24) MMC2_DAT3 */
-			AM62X_IOPAD(0x11c, PIN_INPUT, 0) /* (#N/A) MMC2_CLKB */
+			AM62X_IOPAD(0x120, PIN_INPUT, 0) // (C24) MMC2_CMD
+			AM62X_IOPAD(0x118, PIN_INPUT, 0) // (D25) MMC2_CLK
+			AM62X_IOPAD(0x114, PIN_INPUT, 0) // (B24) MMC2_DAT0
+			AM62X_IOPAD(0x110, PIN_INPUT, 0) // (C25) MMC2_DAT1
+			AM62X_IOPAD(0x10c, PIN_INPUT, 0) // (E23) MMC2_DAT2
+			AM62X_IOPAD(0x108, PIN_INPUT, 0) // (D24) MMC2_DAT3
+			AM62X_IOPAD(0x11c, PIN_INPUT, 0) // (#N/A) MMC2_CLKB
 		>;
 	};
 
 	main_wlirq_pins_default: main-wlirq-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x128, PIN_INPUT, 7) /* (B23) MMC2_SDWP.GPIO0_72 */
+			AM62X_IOPAD(0x128, PIN_INPUT, 7) // (B23) MMC2_SDWP.GPIO0_72
 		>;
 	};
-#endif	// #if 0
-
-
+	*/
 };
 
-#if 0
+
 &sdhci2 {
+	status = "disabled";
+	/*
 	vmmc-supply = <&wlan_en>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mmc2_pins_default>;
@@ -108,9 +106,12 @@
 		interrupt-parent = <&main_gpio0>;
 		interrupts = <72 IRQ_TYPE_EDGE_FALLING>;
 	};
+	*/
 };
 
 &ospi0 {
+	status = "disabled";
+	/*
 	spi_nor_flash: flash@0 {
 		compatible = "jedec,spi-nor";
 		reg = <0x0>;
@@ -165,14 +166,5 @@
 			};
 		};
 	};
+	*/
 };
-#else
-&sdhci2 {
-	status = "disabled";
-};
-
-&ospi0 {
-	status = "disabled";
-};
-
-#endif	// #if 0
