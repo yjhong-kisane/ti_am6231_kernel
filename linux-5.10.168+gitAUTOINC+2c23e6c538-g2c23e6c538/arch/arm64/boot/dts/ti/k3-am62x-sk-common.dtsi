@@ -150,8 +150,9 @@
 			 <3300000 0x1>;
 	};
 
+	/*
 	vcc_1v8: regulator-7 {
-		/* output of TPS6282518DMQ */
+		// output of TPS6282518DMQ
 		compatible = "regulator-fixed";
 		regulator-name = "vcc_1v8";
 		regulator-min-microvolt = <1800000>;
@@ -161,8 +162,6 @@
 		regulator-boot-on;
 	};
 
-
-	/*
 	// For TVL320AIC3106 Audio Codec (McASP1)
 	tlv320_mclk: clk-0 {
 		#clock-cells = <0>;
@@ -274,6 +273,26 @@
 			};
 		};
 	};
+
+	kisan_common {
+		compatible = "kisan_common";
+		status = "okay";
+		
+		UDP_PORT = <7890>;
+		SIG_NUM  = <44>;
+	};
+
+	kisan_gpio_intr {
+		compatible = "kisan_gpio_intr";
+		status = "okay";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&kisan_gpio_intr_pins_default>;
+
+		mode = <0>;
+		gpio-key-fpga = <361>;	// (C20) USB0_DRVVBUS.GPIO1_50
+		//gpio-key-fpga = <399>;		// H24 CPU_BOARD_VER0 (GPIO0_0)
+	};
 };
 
 &main_pmx0 {
@@ -369,38 +388,38 @@
 
 	main_rgmii1_pins_default: main-rgmii1-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x14c, PIN_INPUT, 0) /* (AB17) RGMII1_RD0 */
-			AM62X_IOPAD(0x150, PIN_INPUT, 0) /* (AC17) RGMII1_RD1 */
-			AM62X_IOPAD(0x154, PIN_INPUT, 0) /* (AB16) RGMII1_RD2 */
-			AM62X_IOPAD(0x158, PIN_INPUT, 0) /* (AA15) RGMII1_RD3 */
-			AM62X_IOPAD(0x148, PIN_INPUT, 0) /* (AD17) RGMII1_RXC */
-			AM62X_IOPAD(0x144, PIN_INPUT, 0) /* (AE17) RGMII1_RX_CTL */
-			AM62X_IOPAD(0x134, PIN_OUTPUT, 0) /* (AE20) RGMII1_TD0 */
-			AM62X_IOPAD(0x138, PIN_OUTPUT, 0) /* (AD20) RGMII1_TD1 */
-			AM62X_IOPAD(0x13c, PIN_OUTPUT, 0) /* (AE18) RGMII1_TD2 */
-			AM62X_IOPAD(0x140, PIN_OUTPUT, 0) /* (AD18) RGMII1_TD3 */
-			AM62X_IOPAD(0x130, PIN_OUTPUT, 0) /* (AE19) RGMII1_TXC */
-			AM62X_IOPAD(0x12c, PIN_OUTPUT, 0) /* (AD19) RGMII1_TX_CTL */
+			AM62X_IOPAD(0x14c, PIN_INPUT, 0) // (AB17) RGMII1_RD0
+			AM62X_IOPAD(0x150, PIN_INPUT, 0) // (AC17) RGMII1_RD1
+			//AM62X_IOPAD(0x154, PIN_INPUT, 0) /* (AB16) RGMII1_RD2 */
+			//AM62X_IOPAD(0x158, PIN_INPUT, 0) /* (AA15) RGMII1_RD3 */
+			AM62X_IOPAD(0x148, PIN_INPUT, 0) // (AD17) RGMII1_RXC
+			AM62X_IOPAD(0x144, PIN_INPUT, 0) // (AE17) RGMII1_RX_CTL
+			AM62X_IOPAD(0x134, PIN_OUTPUT, 0) // (AE20) RGMII1_TD0
+			AM62X_IOPAD(0x138, PIN_OUTPUT, 0) // (AD20) RGMII1_TD1
+			//AM62X_IOPAD(0x13c, PIN_OUTPUT, 0) /* (AE18) RGMII1_TD2 */
+			//AM62X_IOPAD(0x140, PIN_OUTPUT, 0) /* (AD18) RGMII1_TD3 */
+			AM62X_IOPAD(0x130, PIN_OUTPUT, 0) // (AE19) RGMII1_TXC
+			AM62X_IOPAD(0x12c, PIN_OUTPUT, 0) // (AD19) RGMII1_TX_CTL
 		>;
 	};
 
 	main_rgmii2_pins_default: main-rgmii2-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x184, PIN_INPUT, 0) /* (AE23) RGMII2_RD0 */
-			AM62X_IOPAD(0x188, PIN_INPUT, 0) /* (AB20) RGMII2_RD1 */
-			AM62X_IOPAD(0x18c, PIN_INPUT, 0) /* (AC21) RGMII2_RD2 */
-			AM62X_IOPAD(0x190, PIN_INPUT, 0) /* (AE22) RGMII2_RD3 */
-			AM62X_IOPAD(0x180, PIN_INPUT, 0) /* (AD23) RGMII2_RXC */
-			AM62X_IOPAD(0x17c, PIN_INPUT, 0) /* (AD22) RGMII2_RX_CTL */
-			AM62X_IOPAD(0x16c, PIN_OUTPUT, 0) /* (Y18) RGMII2_TD0 */
-			AM62X_IOPAD(0x170, PIN_OUTPUT, 0) /* (AA18) RGMII2_TD1 */
-			AM62X_IOPAD(0x174, PIN_OUTPUT, 0) /* (AD21) RGMII2_TD2 */
-			AM62X_IOPAD(0x178, PIN_OUTPUT, 0) /* (AC20) RGMII2_TD3 */
-			AM62X_IOPAD(0x168, PIN_OUTPUT, 0) /* (AE21) RGMII2_TXC */
-			AM62X_IOPAD(0x164, PIN_OUTPUT, 0) /* (AA19) RGMII2_TX_CTL */
+			AM62X_IOPAD(0x184, PIN_INPUT, 0) // (AE23) RGMII2_RD0
+			AM62X_IOPAD(0x188, PIN_INPUT, 0) // (AB20) RGMII2_RD1
+			//AM62X_IOPAD(0x18c, PIN_INPUT, 0) // (AC21) RGMII2_RD2
+			//AM62X_IOPAD(0x190, PIN_INPUT, 0) // (AE22) RGMII2_RD3
+			AM62X_IOPAD(0x180, PIN_INPUT, 0) // (AD23) RGMII2_RXC
+			AM62X_IOPAD(0x17c, PIN_INPUT, 0) // (AD22) RGMII2_RX_CTL
+			AM62X_IOPAD(0x16c, PIN_OUTPUT, 0) // (Y18) RGMII2_TD0
+			AM62X_IOPAD(0x170, PIN_OUTPUT, 0) // (AA18) RGMII2_TD1
+			//AM62X_IOPAD(0x174, PIN_OUTPUT, 0) // (AD21) RGMII2_TD2 // LAN8710_RESET *****
+			//AM62X_IOPAD(0x178, PIN_OUTPUT, 0) // (AC20) RGMII2_TD3
+			AM62X_IOPAD(0x168, PIN_OUTPUT, 0) // (AE21) RGMII2_TXC
+			AM62X_IOPAD(0x164, PIN_OUTPUT, 0) // (AA19) RGMII2_TX_CTL
 		>;
 	};
-	
+
 	/*
 	ospi0_pins_default: ospi0-pins-default {
 		pinctrl-single,pins = <
@@ -512,6 +531,23 @@
 		pinctrl-single,pins = <
 			// L24 0x000f_4088 TOUCH_INT
 			AM62X_IOPAD(0x088, PIN_INPUT, 7)	// (L24) GPMC0_OEn_REn.GPIO0_33
+		>;
+	};
+
+	kisan_gpio_intr_pins_default: kisan-gpio-intr-pins-default{
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x000, PIN_OUTPUT, 7) // (H24) GPIO0_0 (CPU_BOARD_VER0)
+			AM62X_IOPAD(0x004, PIN_OUTPUT, 7) // (G25) GPIO0_1 (CPU_BOARD_VER1)
+			AM62X_IOPAD(0x008, PIN_OUTPUT, 7) // (J24) GPIO0_2 (CPU_BOARD_VER2)
+
+			AM62X_IOPAD(0x00c, PIN_OUTPUT, 7) // (E25) GPIO0_3 (VERSION0)
+			AM62X_IOPAD(0x010, PIN_OUTPUT, 7) // (G24) GPIO0_4 (VERSION1)
+
+			AM62X_IOPAD(0x02c, PIN_OUTPUT, 7) // (F23) GPIO0_11 (AM6232_STATUS_LED1)
+			AM62X_IOPAD(0x034, PIN_OUTPUT, 7) // (H21) GPIO0_13 (AM6232_STATUS_LED3)
+			AM62X_IOPAD(0x038, PIN_OUTPUT, 7) // (E24) GPIO0_14 (AM6232_STATUS_LED2)
+
+			AM62X_IOPAD(0x114, PIN_OUTPUT, 7) // (B24) GPIO0_68 (AM6232_PRU_STATUS -> LAN8710_RESET)
 		>;
 	};
 };
@@ -817,6 +853,7 @@
 	pinctrl-0 = <&main_mmc1_pins_default>;
 	ti,driver-strength-ohm = <50>;
 	disable-wp;
+	no-1-8-v;
 };
 
 &usbss0 {
@@ -853,48 +890,45 @@
 };
 
 &cpsw3g {
-	status = "disabled";
-	/*
+	//TODO::DP83867 Gigabit PHY (CPSW RGMII) -> LAN8710A-EZK (RMII)
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mdio1_pins_default
 		     &main_rgmii1_pins_default
 		     &main_rgmii2_pins_default>;
-	*/
 };
 
 &cpsw_port1 {
-	status = "disabled";
-	/*
-	phy-mode = "rgmii-rxid";
+	//TODO::DP83867 Gigabit PHY (CPSW RGMII) -> LAN8710A-EZK (RMII)
+	//phy-mode = "rgmii-rxid";
 	phy-handle = <&cpsw3g_phy0>;
-	*/
+	phy-mode = "rmii";
 };
 
 &cpsw_port2 {
-	status = "disabled";
-	/*
-	phy-mode = "rgmii-rxid";
+	//phy-mode = "rgmii-rxid";
 	phy-handle = <&cpsw3g_phy1>;
-	*/
+	phy-mode = "rmii";
 };
 
 &cpsw3g_mdio {
-	status = "disabled";
-	/*
+	//TODO::DP83867 Gigabit PHY (CPSW RGMII) -> LAN8710A-EZK (RMII)
 	cpsw3g_phy0: ethernet-phy@0 {
-		reg = <0>;
-		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
-		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
-		ti,min-output-impedance;
-	};
-
-	cpsw3g_phy1: ethernet-phy@1 {
 		reg = <1>;
+		/*
 		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
 		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
 		ti,min-output-impedance;
+		*/
 	};
-	*/
+	
+	cpsw3g_phy1: ethernet-phy@1 {
+		reg = <2>;
+		/*
+		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
+		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
+		ti,min-output-impedance;
+		*/
+	};
 };
 
 &dss {

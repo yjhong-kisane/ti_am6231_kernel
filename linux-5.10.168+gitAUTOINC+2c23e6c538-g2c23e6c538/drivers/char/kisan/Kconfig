@@ -1,0 +1,28 @@
+#
+# AM623x Kisan System B/D Character Device Drivers 
+#
+
+menu "Kisan Character Device Drivers For AM623x"
+
+config KISAN_AM623x_CHAR
+	bool "Kisan Character Device Drivers For AM623x"
+	default n
+	help
+	   Support Kisan Character Device Drivers For AM623x.
+
+config KISAN_AM623x_COMMON
+    tristate "Kisan Common Driver For AM623x"
+    depends on KISAN_AM623x_CHAR
+    default n
+    help
+       Kisan Common Driver For AM623x.
+
+config KISAN_AM623x_GPIO_INTR
+    tristate "Kisan GPIO Interrupt Driver For AM623x"
+    depends on KISAN_AM623x_CHAR
+    default n
+    help
+       Kisan GPIO Interrupt Driver For AM623x.
+
+endmenu
+
