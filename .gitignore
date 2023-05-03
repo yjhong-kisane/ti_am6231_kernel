@@ -22,3 +22,4 @@ linux-5.10.153+gitAUTOINC+3eee621d16-g3eee621d16/vmlinux
 linux-5.10.153+gitAUTOINC+3eee621d16-g3eee621d16/kernel/kheaders_data.tar.xz
 linux-5.10.153+gitAUTOINC+3eee621d16-g3eee621d16/include/generated/
 linux-5.10.153+gitAUTOINC+3eee621d16-g3eee621d16/.vscode-ctags
+linux-5.10.153+gitAUTOINC+3eee621d16-g3eee621d16/arch/arm64/kernel/asm-offsets.s

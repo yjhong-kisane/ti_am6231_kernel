@@ -8,13 +8,13 @@
 // -I ./arch/arm64/include/generated -I ./include
 // -I ./arch/arm64/include/uapi -I ./arch/arm64/include/generated/uapi
 // -I ./include/uapi -I ./include/generated/uapi
-// -iprefix /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/
-// -isysroot /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../aarch64-none-linux-gnu/libc
+// -iprefix /home/yjhong/kisan/TI_AM6231/ti-processor-sdk-linux-am62xx-evm-08.05.00.21/linux-devkit/sysroots/x86_64-arago-linux/usr/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/
+// -isysroot /home/yjhong/kisan/TI_AM6231/ti-processor-sdk-linux-am62xx-evm-08.05.00.21/linux-devkit/sysroots/x86_64-arago-linux/usr/bin/../aarch64-none-linux-gnu/libc
 // -D __KERNEL__ -D KASAN_SHADOW_SCALE_SHIFT=3
 // -D CONFIG_CC_HAS_K_CONSTRAINT=1 -D ARM64_ASM_ARCH="armv8.4-a"
 // -D KASAN_SHADOW_SCALE_SHIFT=3 -D KBUILD_MODFILE="./bounds"
 // -D KBUILD_BASENAME="bounds" -D KBUILD_MODNAME="bounds"
-// -isystem /home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/include
+// -isystem /home/yjhong/kisan/TI_AM6231/ti-processor-sdk-linux-am62xx-evm-08.05.00.21/linux-devkit/sysroots/x86_64-arago-linux/usr/bin/../lib/gcc/aarch64-none-linux-gnu/9.2.1/include
 // -include ./include/linux/kconfig.h
 // -include ./include/linux/compiler_types.h -MMD kernel/.bounds.s.d
 // kernel/bounds.c -mlittle-endian -mgeneral-regs-only -mabi=lp64
