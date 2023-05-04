@@ -381,28 +381,35 @@
 
 	main_mdio1_pins_default: main-mdio1-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x160, PIN_OUTPUT, 0) /* (AD24) MDIO0_MDC */
-			AM62X_IOPAD(0x15c, PIN_INPUT, 0) /* (AB22) MDIO0_MDIO */
+			AM62X_IOPAD(0x160, PIN_OUTPUT, 0) // (AD24) MDIO0_MDC
+			AM62X_IOPAD(0x15c, PIN_INPUT, 0) // (AB22) MDIO0_MDIO
 		>;
 	};
 
 	main_rgmii1_pins_default: main-rgmii1-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x14c, PIN_INPUT, 0) // (AB17) RGMII1_RD0
-			AM62X_IOPAD(0x150, PIN_INPUT, 0) // (AC17) RGMII1_RD1
-			//AM62X_IOPAD(0x154, PIN_INPUT, 0) /* (AB16) RGMII1_RD2 */
-			//AM62X_IOPAD(0x158, PIN_INPUT, 0) /* (AA15) RGMII1_RD3 */
-			AM62X_IOPAD(0x148, PIN_INPUT, 0) // (AD17) RGMII1_RXC
-			AM62X_IOPAD(0x144, PIN_INPUT, 0) // (AE17) RGMII1_RX_CTL
-			AM62X_IOPAD(0x134, PIN_OUTPUT, 0) // (AE20) RGMII1_TD0
-			AM62X_IOPAD(0x138, PIN_OUTPUT, 0) // (AD20) RGMII1_TD1
-			//AM62X_IOPAD(0x13c, PIN_OUTPUT, 0) /* (AE18) RGMII1_TD2 */
-			//AM62X_IOPAD(0x140, PIN_OUTPUT, 0) /* (AD18) RGMII1_TD3 */
-			AM62X_IOPAD(0x130, PIN_OUTPUT, 0) // (AE19) RGMII1_TXC
-			AM62X_IOPAD(0x12c, PIN_OUTPUT, 0) // (AD19) RGMII1_TX_CTL
+			AM62X_IOPAD(0x14c, PIN_INPUT, 1) // (AB17) RGMII1_RD0.RMII1_RXD0		// AM3356_RMII1_RXD0
+			AM62X_IOPAD(0x150, PIN_INPUT, 1) // (AC17) RGMII1_RD1.RMII1_RXD1		// AM3356_RMII1_RXD1
+			AM62X_IOPAD(0x148, PIN_INPUT, 1) // (AD17) RGMII1_RXC.RMII1_REF_CLK		// AM3356_RMII1_REF_CLK
+			AM62X_IOPAD(0x144, PIN_INPUT, 1) // (AE17) RGMII1_RX_CTL.RMII1_RX_ER	// AM3356_RMII1_RXER
+
+			AM62X_IOPAD(0x134, PIN_OUTPUT, 1) // (AE20) RGMII1_TD0.RMII1_TXD0		// AM3356_RMII1_TXD0
+			AM62X_IOPAD(0x138, PIN_OUTPUT, 1) // (AD20) RGMII1_TD1.RMII1_TXD1		// AM3356_RMII1_TXD1
+			AM62X_IOPAD(0x130, PIN_INPUT, 1) // (AE19) RGMII1_TXC.RMII1_CRS_DV		// AM3356_RMII1_CRS_DV
+			AM62X_IOPAD(0x12c, PIN_OUTPUT, 1) // (AD19) RGMII1_TX_CTL.RMII1_TX_EN	// AM3356_RMII1_TXEN
+			
+			AM62X_IOPAD(0x174, PIN_OUTPUT, 7) // (AD21) RGMII2_TD2.GPIO0_91 		// LAN8710_RESET *****
+
+			/*
+			AM62X_IOPAD(0x154, PIN_INPUT, 0) // (AB16) RGMII1_RD2
+			AM62X_IOPAD(0x158, PIN_INPUT, 0) // (AA15) RGMII1_RD3
+			AM62X_IOPAD(0x13c, PIN_OUTPUT, 0) // (AE18) RGMII1_TD2
+			AM62X_IOPAD(0x140, PIN_OUTPUT, 0) // (AD18) RGMII1_TD3
+			*/
 		>;
 	};
 
+	/*
 	main_rgmii2_pins_default: main-rgmii2-pins-default {
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x184, PIN_INPUT, 0) // (AE23) RGMII2_RD0
@@ -419,6 +426,7 @@
 			AM62X_IOPAD(0x164, PIN_OUTPUT, 0) // (AA19) RGMII2_TX_CTL
 		>;
 	};
+	*/
 
 	/*
 	ospi0_pins_default: ospi0-pins-default {
@@ -893,8 +901,8 @@
 	//TODO::DP83867 Gigabit PHY (CPSW RGMII) -> LAN8710A-EZK (RMII)
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mdio1_pins_default
-		     &main_rgmii1_pins_default
-		     &main_rgmii2_pins_default>;
+		     &main_rgmii1_pins_default>;
+		     //&main_rgmii2_pins_default>;
 };
 
 &cpsw_port1 {
@@ -905,9 +913,12 @@
 };
 
 &cpsw_port2 {
+	status = "disabled";
+	/*
 	//phy-mode = "rgmii-rxid";
 	phy-handle = <&cpsw3g_phy1>;
 	phy-mode = "rmii";
+	*/
 };
 
 &cpsw3g_mdio {
@@ -920,15 +931,14 @@
 		ti,min-output-impedance;
 		*/
 	};
-	
+	/*
 	cpsw3g_phy1: ethernet-phy@1 {
 		reg = <2>;
-		/*
 		ti,rx-internal-delay = <DP83867_RGMIIDCTL_2_00_NS>;
 		ti,fifo-depth = <DP83867_PHYCR_FIFO_DEPTH_4_B_NIB>;
 		ti,min-output-impedance;
-		*/
 	};
+	*/
 };
 
 &dss {
