@@ -1081,3 +1081,29 @@
 &ecap2_pwm {
 	status = "disabled";
 };
+
+
+// NOTE::2023-05-09
+// https://e2e.ti.com/support/processors-group/processors/f/processors-forum/1218039/am623-stuck-in-sd-card-after-boot-up/4622186#4622186
+&main_rti0 {	// watchdog@e000000
+	status = "okay";
+};
+
+&main_rti1 {	// watchdog@e010000
+	status = "okay";
+};
+
+&main_rti2 {	// watchdog@e020000
+	status = "disabled";
+	// Internal error: synchronous external abort: 96000010 [#1] PREEMPT SMP
+};
+
+&main_rti3 {	// watchdog@e030000
+	status = "disabled";
+	// Internal error: synchronous external abort: 96000010 [#1] PREEMPT SMP
+};
+
+&main_rti15 {	// watchdog@e0f0000
+	status = "disabled";
+	// Internal error: synchronous external abort: 96000010 [#1] PREEMPT SMP
+};

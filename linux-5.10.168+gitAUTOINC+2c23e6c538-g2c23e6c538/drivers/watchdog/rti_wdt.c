@@ -254,6 +254,10 @@ static int rti_wdt_probe(struct platform_device *pdev)
 		goto err_iomap;
 	}
 
+	// NOTE::2023-05-09
+	// https://e2e.ti.com/support/processors-group/processors/f/processors-forum/1218039/am623-stuck-in-sd-card-after-boot-up/4622186#4622186
+	dev_warn(dev, "Trying to check register RTIDWDCTRL...\n");
+
 	if (readl(wdt->base + RTIDWDCTRL) == WDENABLE_KEY) {
 		u32 time_left_ms;
 		u64 heartbeat_ms;
@@ -284,6 +288,10 @@ static int rti_wdt_probe(struct platform_device *pdev)
 			last_ping = 0;
 		}
 	}
+
+	// NOTE::2023-05-09
+	// https://e2e.ti.com/support/processors-group/processors/f/processors-forum/1218039/am623-stuck-in-sd-card-after-boot-up/4622186#4622186
+	dev_warn(dev, "Trying to read register RTIDWDCTRL... OK.\n");
 
 	watchdog_init_timeout(wdd, heartbeat, dev);
 
