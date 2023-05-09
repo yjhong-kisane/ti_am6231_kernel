@@ -853,7 +853,15 @@
 	pinctrl-0 = <&main_mmc1_pins_default>;
 	ti,driver-strength-ohm = <50>;
 	disable-wp;
-	no-1-8-v;
+	no-1-8-v;	//  disable SD card HS modes.
+	
+	// NOTE::2023-05-09
+	// https://software-dl.ti.com/processor-sdk-linux/esd/AM62X/08_06_00_42/exports/docs/linux/Foundational_Components/U-Boot/UG-Memory.html
+	// Restricting to a given speed mode
+	//sdhci-caps-mask = <0x00000004 0x00000000>;	// Limit to SDR50
+	//sdhci-caps-mask = <0x00000006 0x00000000>;	// Limit to DDR50
+	sdhci-caps-mask = <0x00000007 0x00000000>;	// Limit to SD HS
+	//sdhci-caps-mask = <0x00000007 0x00200000>;	// Limit to SD legacy
 };
 
 &usbss0 {
