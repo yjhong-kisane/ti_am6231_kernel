@@ -18,6 +18,18 @@
 #include <asm/setup.h>
 #endif
 
+
+//NOTE::2023-05-10
+// Kisan 부팅 로고 출력을 위한 정의 추가 (KISAN_CUSTOM_BOOT_LOGO)
+// logo_linux_clut224.ppm 파일을 800*480 기준으로 변경하여 컴파일 후
+//  logo_linux_clut224.c 가 변경되었는지 확인
+#define KISAN_CUSTOM_BOOT_LOGO
+
+#if defined(KISAN_CUSTOM_BOOT_LOGO)
+#include <asm/io.h> // ioremap
+#endif	// #if defined(KISAN_CUSTOM_BOOT_LOGO)
+
+
 static bool nologo;
 module_param(nologo, bool, 0);
 MODULE_PARM_DESC(nologo, "Disables startup logo");
@@ -43,7 +55,51 @@ late_initcall_sync(fb_logo_late_init);
  */
 const struct linux_logo * __ref fb_find_logo(int depth)
 {
+#if defined(KISAN_CUSTOM_BOOT_LOGO)
+	struct linux_logo *logo = NULL;
+	struct linux_logo kisan_logo;
+	
+	unsigned char *pucLogo;
+	unsigned char *pucClut;
+	unsigned char *pucData;
+
+	memset(&kisan_logo, 0x00, sizeof(struct linux_logo));
+
+	// NOTE::2023-05-10
+	// 커널 부팅 인자 (Kernel command line: ... loglevel=8 mem=952M) 중 mem 항목에 따라
+	// AM6232 : 1G 기준 설정 리눅스 영역을 952MB (0x8000_0000 ~ 0xbb7f_ffff) 로 설정하여
+	// 바로 이어지는 0xbb80_0000 을 Boot Logo File DDR Physical Offset Address 로 설정함
+	
+	pucLogo = (unsigned char *)ioremap(0xbb800000, 0x200000);   // 2MB (0xbb80_0000 ~ 0xbb9f_ffff)
+	pucClut = (unsigned char *)pucLogo + 16;
+	pucData = pucClut + (224 * 3);
+
+	kisan_logo.type = (((pucLogo[3] & 0xff) << 24) |
+						((pucLogo[2] & 0xff) << 16) |
+						((pucLogo[1] & 0xff) <<  8) |
+						(pucLogo[0] & 0xff));
+
+	kisan_logo.width = (((pucLogo[7] & 0xff) << 24) |
+						((pucLogo[6] & 0xff) << 16) |
+						((pucLogo[5] & 0xff) <<  8) |
+						(pucLogo[4] & 0xff));
+
+	kisan_logo.height = (((pucLogo[11] & 0xff) << 24) |
+						((pucLogo[10] & 0xff) << 16) |
+						((pucLogo[9] & 0xff) <<  8) |
+						(pucLogo[8] & 0xff));
+
+	kisan_logo.clutsize = (((pucLogo[15] & 0xff) << 24) |
+						((pucLogo[14] & 0xff) << 16) |
+						((pucLogo[13] & 0xff) <<  8) |
+						(pucLogo[12] & 0xff));
+	
+	printk(KERN_DEBUG "[%s:%4d:%s] Kisan Boot Logo (%d x %d) \n",
+		__FILE__, __LINE__, __FUNCTION__, kisan_logo.width, kisan_logo.height);
+#else
 	const struct linux_logo *logo = NULL;
+#endif	// #if defined(KISAN_CUSTOM_BOOT_LOGO)
+
 
 	if (nologo || logos_freed)
 		return NULL;
@@ -74,7 +130,39 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 #ifdef CONFIG_LOGO_LINUX_CLUT224
 		/* Generic Linux logo */
 		logo = &logo_linux_clut224;
-#endif
+
+#if defined(KISAN_CUSTOM_BOOT_LOGO)
+		if (logo->type == kisan_logo.type)
+//			  && (logo->width == kisan_logo.width)
+//			  && (logo->height == kisan_logo.height)
+//			  && (logo->clutsize == kisan_logo.clutsize))
+		{
+			memcpy(&logo->type, &kisan_logo.type, 4);
+			memcpy(&logo->width, &kisan_logo.width, 4);
+			memcpy(&logo->height, &kisan_logo.height, 4);
+			memcpy(&logo->clutsize, &kisan_logo.clutsize, 4);
+	
+			memcpy((void *)logo->clut, pucClut, (224*3));
+			memcpy((void *)logo->data, pucData, (logo->width*logo->height));
+		}
+		else {
+			printk(KERN_ERR "[%s:%4d:%s] Check a Logo File in FAT32 Partition...\n",
+				__FILE__, __LINE__, __FUNCTION__);
+			printk(KERN_ERR "[%s:%4d:%s]  Logo_type 	: %3d, %3d \n",
+				__FILE__, __LINE__, __FUNCTION__, logo->type, kisan_logo.type);
+			printk(KERN_ERR "[%s:%4d:%s]  Logo_width	: %3d, %3d \n",
+				__FILE__, __LINE__, __FUNCTION__, logo->width, kisan_logo.width);
+			printk(KERN_ERR "[%s:%4d:%s]  Logo_height	: %3d, %3d \n",
+				__FILE__, __LINE__, __FUNCTION__, logo->height, kisan_logo.height);
+			printk(KERN_ERR "[%s:%4d:%s]  Logo_clutsize : %3d, %3d \n",
+				__FILE__, __LINE__, __FUNCTION__, logo->clutsize, kisan_logo.clutsize);
+		}
+
+		iounmap(pucLogo);
+#endif  // #if defined( KISAN_CUSTOM_BOOT_LOGO )
+#endif	// #ifdef CONFIG_LOGO_LINUX_CLUT224
+
+
 #ifdef CONFIG_LOGO_DEC_CLUT224
 		/* DEC Linux logo on MIPS/MIPS64 or ALPHA */
 		logo = &logo_dec_clut224;
