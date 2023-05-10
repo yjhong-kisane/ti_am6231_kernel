@@ -19,6 +19,23 @@
 #include <asm/types.h>
 #include "fbcon.h"
 
+
+//NOTE::2023-05-10
+// Touch LCD 에 하기의 Console 띄우지 않기 위한 정의 추가 (KISAN_DISABLE_LCD_CONSOLE)
+/*
+ _____                    _____           _         _
+|  _  |___ ___ ___ ___   |  _  |___ ___  |_|___ ___| |_
+|     |  _| .'| . | . |  |   __|  _| . | | | -_|  _|  _|
+|__|__|_| |__,|_  |___|  |__|  |_| |___|_| |___|___|_|
+              |___|                    |___|
+
+Arago Project am62xx-evm tty1
+Arago 2021.09 am62xx-evm tty1
+am62xx-evm login:
+*/
+#define KISAN_DISABLE_LCD_CONSOLE
+
+
 /*
  * Accelerated handlers.
  */
@@ -154,6 +171,11 @@ static void bit_putcs(struct vc_data *vc, struct fb_info *info,
 	u32 attribute = get_attribute(info, scr_readw(s));
 	u8 *dst, *buf = NULL;
 
+#if defined( KISAN_DISABLE_LCD_CONSOLE )
+	//printk(KERN_DEBUG "[%s:%4d:%s] TRACE:\n", __FILE__, __LINE__, __FUNCTION__);
+	return;
+#endif	// #if defined( KISAN_DISABLE_LCD_CONSOLE )
+
 	image.fg_color = fg;
 	image.bg_color = bg;
 	image.dx = xx * vc->vc_font.width;
@@ -244,6 +266,11 @@ static void bit_cursor(struct vc_data *vc, struct fb_info *info, int mode,
 	int attribute, use_sw = vc->vc_cursor_type & CUR_SW;
 	int err = 1;
 	char *src;
+
+#if defined( KISAN_DISABLE_LCD_CONSOLE )
+	//printk(KERN_DEBUG "[%s:%4d:%s] TRACE:\n", __FILE__, __LINE__, __FUNCTION__);
+	return;
+#endif	// #if defined( KISAN_DISABLE_LCD_CONSOLE )
 
 	cursor.set = 0;
 
