@@ -538,7 +538,13 @@
 	
 	main_epwm2_pins_default: main-epwm2-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x1e8, PIN_OUTPUT, 8)	// (B17) I2C1_SCL.EHRPWM2_A (AM6232_LCD_BACKLIGHT_PWM)
+			/*
+			// NOTE::2023-05-11
+			// 부팅 하면서 설정 변경 (GPIO1_28 0x07 -> EHRPWM2_A 0x08)
+			// devmem2 0x000f41e8 b 0x08
+			*/
+			//AM62X_IOPAD(0x1e8, PIN_OUTPUT, 8)	// (B17) I2C1_SCL.EHRPWM2_A (AM6232_LCD_BACKLIGHT_PWM)
+			AM62X_IOPAD(0x1e8, PIN_OUTPUT, 7)	// (B17) I2C1_SCL.GPIO1_28 (AM6232_LCD_BACKLIGHT_PWM)
 		>;
 	};
 
