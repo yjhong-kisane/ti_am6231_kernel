@@ -310,12 +310,14 @@
 		>;
 	};
 
+	/*
 	main_i2c1_pins_default: main-i2c1-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x1e8, PIN_INPUT_PULLUP, 0) /* (B17) I2C1_SCL */
-			AM62X_IOPAD(0x1ec, PIN_INPUT_PULLUP, 0) /* (A17) I2C1_SDA */
+			AM62X_IOPAD(0x1e8, PIN_INPUT_PULLUP, 0) // (B17) I2C1_SCL
+			AM62X_IOPAD(0x1ec, PIN_INPUT_PULLUP, 0) // (A17) I2C1_SDA
 		>;
 	};
+	*/
 
 	main_i2c2_pins_default: main-i2c2-pins-default {
 		pinctrl-single,pins = <
@@ -528,6 +530,18 @@
 	};
 	*/
 
+	main_epwm1_pins_default: main-epwm1-pins-default {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x19c, PIN_OUTPUT, 6)	// (B18) MCASP0_AXR1.EHRPWM1_A (BEEP)
+		>;
+	};
+	
+	main_epwm2_pins_default: main-epwm2-pins-default {
+		pinctrl-single,pins = <
+			AM62X_IOPAD(0x1e8, PIN_OUTPUT, 8)	// (B17) I2C1_SCL.EHRPWM2_A (AM6232_LCD_BACKLIGHT_PWM)
+		>;
+	};
+
 	lcd_pins_default: lcd-pins-default {
 		pinctrl-single,pins = <
 			/* B19 0x000f_4194 AM6232_LCD_DISP */
@@ -737,9 +751,13 @@
 
 
 &main_i2c1 {
+	status = "disabled";
+	
+	/*
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_i2c1_pins_default>;
 	clock-frequency = <100000>;	// 100 kHz
+	*/
 
 	/*
 	exp1: gpio@22 {
@@ -1058,16 +1076,23 @@
 	status = "reserved";
 };
 
+
+// NOTE::2023-05-11
+// https://software-dl.ti.com/processor-sdk-linux/esd/AM62X/08_03_00_19/exports/docs/linux/Foundational_Components/Kernel/Kernel_Drivers/PWM.html
 &epwm0 {
-	status = "disabled";
+	status = "okay";
 };
 
 &epwm1 {
-	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_epwm1_pins_default>;
+	status = "okay";
 };
 
 &epwm2 {
-	status = "disabled";
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_epwm2_pins_default>;
+	status = "okay";
 };
 
 &ecap0_pwm {
