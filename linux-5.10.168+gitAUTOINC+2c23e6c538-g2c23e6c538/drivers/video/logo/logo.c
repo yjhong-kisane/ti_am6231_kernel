@@ -70,7 +70,8 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 	// AM6232 : 1G 기준 설정 리눅스 영역을 952MB (0x8000_0000 ~ 0xbb7f_ffff) 로 설정하여
 	// 바로 이어지는 0xbb80_0000 을 Boot Logo File DDR Physical Offset Address 로 설정함
 	
-	pucLogo = (unsigned char *)ioremap(0xbb800000, 0x200000);   // 2MB (0xbb80_0000 ~ 0xbb9f_ffff)
+	//pucLogo = (unsigned char *)ioremap(0xbb800000, 0x400000);   // 4MB (0xbb80_0000 ~ 0xbbbf_ffff) - 1GB DDR / 리눅스 952M 기준
+	pucLogo = (unsigned char *)ioremap(0xf6c00000, 0x400000);   // 4MB (0xf6c0_0000 ~ 0xf6ff_ffff) - 2GB DDR / 리눅스 1900M 기준
 	pucClut = (unsigned char *)pucLogo + 16;
 	pucData = pucClut + (224 * 3);
 

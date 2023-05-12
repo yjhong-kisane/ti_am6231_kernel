@@ -40,6 +40,7 @@
 
 #include <kisan/kisan_common.h>
 #include <kisan/cslr_soc_baseaddress.h>
+#include <kisan/cslr_gpio.h>
 
 
 #define DBG_MSG_ON_KISAN_GPIO_INTR
@@ -221,8 +222,89 @@ lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip510 -> ../../devices/platform/
 --w-------  1 root root 4096 Jan  1  1970 unexport
 */
 
+	unsigned int unRegVal = 0x00000000;
+    void __iomem *iomem = NULL;
+	//int i = 0;
+
+/*
+	iomem = ioremap(CSL_PADCFG_CTRL0_CFG0_BASE, CSL_PADCFG_CTRL0_CFG0_SIZE);	// 0xf_0000
+    if(!iomem) {
+        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_PADCFG_CTRL0_CFG0_BASE.\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+//        return -1;
+    }
 
 
+	unRegVal = ioread32(iomem + 0x402c);
+	printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+	//BIT_CLR(unRegVal, 21);	// TX_DIS
+
+	unRegVal = 0x08014007;
+
+	iowrite32(unRegVal, iomem + 0x402c);
+	unRegVal = ioread32(iomem + 0x402c);
+	printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+
+	iowrite32(unRegVal, iomem + 0x4034);
+	iowrite32(unRegVal, iomem + 0x4038);
+	iowrite32(unRegVal, iomem + 0x4114);
+
+	iounmap(iomem);
+*/
+
+
+	iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
+    if(!iomem) {
+        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_GPIO0_BASE.\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+//        return -1;
+    }
+
+/*
+	unRegVal = ioread32(iomem + CSL_GPIO_DIR(0));
+	printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+	BIT_CLR(unRegVal, 11);	//GPIO0_11
+	BIT_CLR(unRegVal, 13);	//GPIO0_13
+	BIT_CLR(unRegVal, 14);	//GPIO0_14
+	iowrite32(unRegVal, iomem + CSL_GPIO_DIR(0));
+	printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+*/
+
+//	for(i = 0 ; i < 3 ; i ++)
+//	{
+		unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
+		printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+		BIT_SET(unRegVal, 11);	//GPIO0_11
+		BIT_SET(unRegVal, 13);	//GPIO0_13
+		BIT_SET(unRegVal, 14);	//GPIO0_14
+		iowrite32(unRegVal, iomem + CSL_GPIO_SET_DATA(0));
+		unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
+		printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+
+		mdelay(1000);
+
+		unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
+		printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+		BIT_SET(unRegVal, 11);	//GPIO0_11
+		BIT_SET(unRegVal, 13);	//GPIO0_13
+		BIT_SET(unRegVal, 14);	//GPIO0_14
+		iowrite32(unRegVal, iomem + CSL_GPIO_CLR_DATA(0));
+		unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
+		printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+
+//		mdelay(1000);
+//	}
+
+	iounmap(iomem);
+
+	return;
+
+#if 0
+/*
+[    0.117704] [kisan_gpio_intr.c:TestGpio:239] GPIO0_11 PADCFG: 0x00010007
+[    0.117713] [kisan_gpio_intr.c:TestGpio:243] GPIO0_11 PADCFG: 0x00010007
+[    0.117727] [kisan_gpio_intr.c: 263:TestGpio] Failed to request gpio#410
+*/
 
     int nErr = 0;
     //int nPinNum = 0;
@@ -247,19 +329,23 @@ lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip510 -> ../../devices/platform/
 				gpio_free(nPinNum);
 				//printk(KERN_ERR "[%s:%4d:%s] Free gpio#%d\n", __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
 				#else
-                gpio_set_value(nPinNum, 0);
-                printk(KERN_ERR "[%s:%4d:%s] GPIO#%d Value: %d \n", 
-                        __FILENAME__, __LINE__, __FUNCTION__, nPinNum, gpio_get_value(nPinNum));
-                mdelay(100);
+				for(i = 0 ; i < 3 ; i++)
+				{
+					gpio_set_value(nPinNum, 0);
+					printk(KERN_ERR "[%s:%4d:%s] GPIO#%d Value: %d \n", 
+							__FILENAME__, __LINE__, __FUNCTION__, nPinNum, gpio_get_value(nPinNum));
+					mdelay(1000);
 
-                gpio_set_value(nPinNum, 1);
-                printk(KERN_ERR "[%s:%4d:%s] GPIO#%d Value: %d \n", 
-                        __FILENAME__, __LINE__, __FUNCTION__, nPinNum, gpio_get_value(nPinNum));
-                mdelay(100);
+					gpio_set_value(nPinNum, 1);
+					printk(KERN_ERR "[%s:%4d:%s] GPIO#%d Value: %d \n", 
+							__FILENAME__, __LINE__, __FUNCTION__, nPinNum, gpio_get_value(nPinNum));
+					mdelay(1000);
+				}
 				#endif
             }
         }
     }
+#endif	// #if 0
 }
 
 static int ResetPhyLAN8710A(void)
@@ -394,6 +480,10 @@ static int kisan_gpio_intr_probe(struct platform_device *pdev)
 
     
     TestGpio();
+		
+	
+
+
 
 /*
 
