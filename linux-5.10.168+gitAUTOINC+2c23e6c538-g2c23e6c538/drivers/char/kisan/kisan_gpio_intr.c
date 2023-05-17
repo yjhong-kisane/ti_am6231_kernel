@@ -95,8 +95,6 @@ static void GpioIntr_FrontKey_WorkFunc(struct work_struct *work)
 
 	struct stTimer *tt = container_of(work, struct stTimer, work);
 
-    printk(KERN_DEBUG "[%s:%4d:%s] TRACE:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", __FILENAME__, __LINE__, __FUNCTION__);
-
 	nGpioNum = tt->nGpioNum;
 	nKeyNum = tt->nKeyNum;
 
@@ -105,6 +103,10 @@ static void GpioIntr_FrontKey_WorkFunc(struct work_struct *work)
     aucSendBuf[0] = 0x01;       // Userspace에서 구분하는데 사용할 UDP CMD
     aucSendBuf[1] = ucGpioVal;	// Status (Push(0)/Release(1))
 	aucSendBuf[2] = 0;
+
+	printk(KERN_DEBUG "[%s:%4d:%s] SendUdpMsg [ %2x %2x %2x ]\n", 
+		__FILENAME__, __LINE__, __FUNCTION__, 
+		aucSendBuf[0], aucSendBuf[1], aucSendBuf[2]);
 
 	SendUdpMsg(&aucSendBuf[0], LENGTH_OF_DDR_SHM_DATA_KEY);
 }
@@ -119,8 +121,6 @@ static irqreturn_t IsrForFrontKey(int irq, void *dev_id)
 
 	struct stTimer *tt = dev_id;
 	mod_timer(&tt->timer, jiffies + msecs_to_jiffies(tt->nDebounceTime));
-
-    printk(KERN_DEBUG "[%s:%4d:%s] TRACE:!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", __FILENAME__, __LINE__, __FUNCTION__);
 
 #if defined( DBG_MSG_ON_KISAN_GPIO_INTR )
 	nGpioNum = tt->nGpioNum;
@@ -192,66 +192,149 @@ static struct file_operations kisan_gpio_intr_fops = {
 };
 
 
-
-
 static void TestGpio(void)
 {
 /*
-root@am62xx-evm:~# cat /sys/kernel/debug/gpio
-gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio:
- gpio-318 (                    |enable              ) out lo
+	// NOTE::2023-05-17
+	// GPIO 작업 시 확인해야 할 문서
 
-gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio:
- gpio-431 (                    |regulator-3         ) out lo
- gpio-441 (                    |tps65219-LDO1-SEL-SD) out lo
+	Datasheet P.18 ~
+		Pin Attributes
+	Datasheet P.63 ~
+		GPIO# Signal Descriptions
 
-gpiochip1: GPIOs 486-509, parent: platform/4201000.gpio, 4201000.gpio:
+	TRM P.34 
+		Memory Map
+			PADCFG_CTRL0_CFG0 : 0x000F0000
+			GPIO0 : 0x00600000
+			GPIO1 : 0x00601000
 
-gpiochip0: GPIOs 510-511, parent: platform/3b000000.memory-controller, omap-gpmc:
+	TRM P.3645~~ 
+		6.1.2.3 Pad Configuration Ball Names
+			TX_DIS bit (TRM P.3643, 3644)
+				0=Driver is enabled, 1=Driver is disabled
 
+	TRM P.2375 ~
+		4.7.1.4 GPIO Register / Pin Mapping
 
-root@am62xx-evm:~# ll /sys/class/gpio/
-total 0
-drwxr-xr-x  2 root root    0 Jan  1  1970 .
-drwxr-xr-x 66 root root    0 Jan  1  1970 ..
---w-------  1 root root 4096 Jan  1  1970 export
-lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip311 -> ../../devices/platform/bus@f0000/601000.gpio/gpio/gpiochip311
-lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip399 -> ../../devices/platform/bus@f0000/600000.gpio/gpio/gpiochip399
-lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip486 -> ../../devices/platform/bus@f0000/bus@f0000:bus@4000000/4201000.gpio/gpio/gpiochip486
-lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip510 -> ../../devices/platform/bus@f0000/3b000000.memory-controller/gpio/gpiochip510
---w-------  1 root root 4096 Jan  1  1970 unexport
+	TRM P.8781 ~
+		12.2.5.1 GPIO Registers
+			GPIO_DIR01
+			GPIO_SET_DATA01
+			GPIO_CLR_DATA01
+
 */
 
+/*
+	// NOTE::2023-05-17
+	// gpio 할당 번호 / 상태 확인
+	root@am62xx-evm:~# cat /sys/kernel/debug/gpio
+	gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio:
+	gpio-318 (                    |enable              ) out lo
+
+	gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio:
+	gpio-431 (                    |regulator-3         ) out lo
+	gpio-441 (                    |tps65219-LDO1-SEL-SD) out lo
+
+	gpiochip1: GPIOs 486-509, parent: platform/4201000.gpio, 4201000.gpio:
+
+	gpiochip0: GPIOs 510-511, parent: platform/3b000000.memory-controller, omap-gpmc:
+
+	// NOTE::2023-05-17
+	// sysfs 에서 gpio handling 시 경로 참고
+	root@am62xx-evm:~# ll /sys/class/gpio/
+	total 0
+	drwxr-xr-x  2 root root    0 Jan  1  1970 .
+	drwxr-xr-x 66 root root    0 Jan  1  1970 ..
+	--w-------  1 root root 4096 Jan  1  1970 export
+	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip311 -> ../../devices/platform/bus@f0000/601000.gpio/gpio/gpiochip311
+	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip399 -> ../../devices/platform/bus@f0000/600000.gpio/gpio/gpiochip399
+	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip486 -> ../../devices/platform/bus@f0000/bus@f0000:bus@4000000/4201000.gpio/gpio/gpiochip486
+	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip510 -> ../../devices/platform/bus@f0000/3b000000.memory-controller/gpio/gpiochip510
+	--w-------  1 root root 4096 Jan  1  1970 unexport
+
+	// NOTE::2023-05-17
+	// (G25) GPIO0_1 (CPU_BOARD_VER1) 상태 변경 시 예시
+	echo 400 > /sys/class/gpio/export
+	echo out > /sys/class/gpio/gpio400/direction
+	echo 0 > /sys/class/gpio/gpio400/value
+	echo 1 > /sys/class/gpio/gpio400/value
+*/
+
+#if 0
+	// NOTE::2023-05-17
+	// 커널 빌트인으로 이미지에 탑재하여 실행하면 동작하지 않고,
+	// 커널 모듈로 Init Process 에서 실행해야만 동작하는 이슈가 있음
+
+	int nIrq = 0;
+	int i = 0;
+
+	for(i = 310 ; i < 512 ; i++)
+	{
+		if(gpio_is_valid(i))
+		{
+			//if(gpio_request_one(i, GPIOF_IN, "TEST") < 0)
+			if(devm_gpio_request(&pdev->dev, i, "TEST") < 0)
+			{
+				printk(KERN_ERR "[%s:%4d] Failed to gpio(%d)_request...\n", __FILENAME__, __LINE__, i);
+				continue;
+			}
+
+			nIrq = gpio_to_irq(i);
+			if (nIrq < 0)
+			{
+				printk(KERN_ERR "[%s:%4d] Failed to gpio(%d)_to_irq(%d).\n", __FILENAME__, __LINE__, i, nIrq);
+			}
+			else
+			{
+				printk(KERN_ERR "[%s:%4d] ***********************************gpio(%d)_to_irq(%d).\n", __FILENAME__, __LINE__, i, nIrq);
+			}	
+		}
+		else
+		{
+			printk(KERN_ERR "[%s:%4d] Failed to gpio(%d)_is_valid.\n", __FILENAME__, __LINE__, i);
+		}
+	}
+#endif	// #if 0
+
+#if 0
+	// NOTE::2023-05-17
+	// 디바이스 트리에서 Pinmux 시, 실행할 필요 없음
 	unsigned int unRegVal = 0x00000000;
     void __iomem *iomem = NULL;
-	//int i = 0;
 
-/*
 	iomem = ioremap(CSL_PADCFG_CTRL0_CFG0_BASE, CSL_PADCFG_CTRL0_CFG0_SIZE);	// 0xf_0000
     if(!iomem) {
         printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_PADCFG_CTRL0_CFG0_BASE.\n",
             __FILENAME__, __LINE__, __FUNCTION__);
 //        return -1;
     }
+	else
+	{
+		unRegVal = ioread32(iomem + 0x4004);
+		printk(KERN_ERR "[%s:%s:%d] GPIO0_1 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+		BIT_CLR(unRegVal, 21);	// TX_DIS
 
+		iowrite32(unRegVal, iomem + 0x4004);
+		unRegVal = ioread32(iomem + 0x4004);
+		printk(KERN_ERR "[%s:%s:%d] GPIO0_1 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
 
-	unRegVal = ioread32(iomem + 0x402c);
-	printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-	//BIT_CLR(unRegVal, 21);	// TX_DIS
+		unRegVal = ioread32(iomem + 0x402c);
+		printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+		//BIT_CLR(unRegVal, 21);	// TX_DIS
 
-	unRegVal = 0x08014007;
+		unRegVal = 0x08014007;
 
-	iowrite32(unRegVal, iomem + 0x402c);
-	unRegVal = ioread32(iomem + 0x402c);
-	printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+		iowrite32(unRegVal, iomem + 0x402c);
+		unRegVal = ioread32(iomem + 0x402c);
+		printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
 
-	iowrite32(unRegVal, iomem + 0x4034);
-	iowrite32(unRegVal, iomem + 0x4038);
-	iowrite32(unRegVal, iomem + 0x4114);
-
-	iounmap(iomem);
-*/
-
+		iowrite32(unRegVal, iomem + 0x4034);
+		iowrite32(unRegVal, iomem + 0x4038);
+		iowrite32(unRegVal, iomem + 0x4114);
+		
+		iounmap(iomem);
+	}
 
 	iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
     if(!iomem) {
@@ -259,145 +342,55 @@ lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip510 -> ../../devices/platform/
             __FILENAME__, __LINE__, __FUNCTION__);
 //        return -1;
     }
+	else
+	{
+	/*
+		unRegVal = ioread32(iomem + CSL_GPIO_DIR(0));
+		printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+		BIT_CLR(unRegVal, 11);	//GPIO0_11
+		BIT_CLR(unRegVal, 13);	//GPIO0_13
+		BIT_CLR(unRegVal, 14);	//GPIO0_14
+		iowrite32(unRegVal, iomem + CSL_GPIO_DIR(0));
+		printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+	*/
+		
+		// NOTE::2023-05-17
+		// STATUS LED 켜기 테스트
+	//	for(i = 0 ; i < 3 ; i ++)
+	//	{
+			unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
+			printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+			BIT_SET(unRegVal, 11);	//GPIO0_11
+			BIT_SET(unRegVal, 13);	//GPIO0_13
+			BIT_SET(unRegVal, 14);	//GPIO0_14
+			iowrite32(unRegVal, iomem + CSL_GPIO_SET_DATA(0));
+			unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
+			printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
 
-/*
-	unRegVal = ioread32(iomem + CSL_GPIO_DIR(0));
-	printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-	BIT_CLR(unRegVal, 11);	//GPIO0_11
-	BIT_CLR(unRegVal, 13);	//GPIO0_13
-	BIT_CLR(unRegVal, 14);	//GPIO0_14
-	iowrite32(unRegVal, iomem + CSL_GPIO_DIR(0));
-	printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-*/
+			mdelay(1000);
 
-//	for(i = 0 ; i < 3 ; i ++)
-//	{
-		unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
-		printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-		BIT_SET(unRegVal, 11);	//GPIO0_11
-		BIT_SET(unRegVal, 13);	//GPIO0_13
-		BIT_SET(unRegVal, 14);	//GPIO0_14
-		iowrite32(unRegVal, iomem + CSL_GPIO_SET_DATA(0));
-		unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
-		printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+			unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
+			printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
+			BIT_SET(unRegVal, 11);	//GPIO0_11
+			BIT_SET(unRegVal, 13);	//GPIO0_13
+			BIT_SET(unRegVal, 14);	//GPIO0_14
+			iowrite32(unRegVal, iomem + CSL_GPIO_CLR_DATA(0));
+			unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
+			printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
 
-		mdelay(1000);
+	//		mdelay(1000);
+	//	}
 
-		unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
-		printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-		BIT_SET(unRegVal, 11);	//GPIO0_11
-		BIT_SET(unRegVal, 13);	//GPIO0_13
-		BIT_SET(unRegVal, 14);	//GPIO0_14
-		iowrite32(unRegVal, iomem + CSL_GPIO_CLR_DATA(0));
-		unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
-		printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-
-//		mdelay(1000);
-//	}
-
-	iounmap(iomem);
-
-	return;
-
-#if 0
-/*
-[    0.117704] [kisan_gpio_intr.c:TestGpio:239] GPIO0_11 PADCFG: 0x00010007
-[    0.117713] [kisan_gpio_intr.c:TestGpio:243] GPIO0_11 PADCFG: 0x00010007
-[    0.117727] [kisan_gpio_intr.c: 263:TestGpio] Failed to request gpio#410
-*/
-
-    int nErr = 0;
-    //int nPinNum = 0;
-    //for (nPinNum = 311 ; nPinNum < 512 ; nPinNum++)
-	int nPinNum = 467; //(AM6232_PRU_STATUS -> LAN8710_RESET)
-    {
-        if(!gpio_is_valid(nPinNum)) {
-            printk(KERN_ERR "[%s:%4d:%s] Invalid GPIO... (%d) \n", 
-                    __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
-            //continue;
-        }
-        else {
-            nErr = gpio_request(nPinNum, "");
-            if (nErr) {
-                printk(KERN_ERR "[%s:%4d:%s] Failed to request gpio#%d\n", 
-                    __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
-                //continue;
-            }
-            else
-            {
-				#if 0
-				gpio_free(nPinNum);
-				//printk(KERN_ERR "[%s:%4d:%s] Free gpio#%d\n", __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
-				#else
-				for(i = 0 ; i < 3 ; i++)
-				{
-					gpio_set_value(nPinNum, 0);
-					printk(KERN_ERR "[%s:%4d:%s] GPIO#%d Value: %d \n", 
-							__FILENAME__, __LINE__, __FUNCTION__, nPinNum, gpio_get_value(nPinNum));
-					mdelay(1000);
-
-					gpio_set_value(nPinNum, 1);
-					printk(KERN_ERR "[%s:%4d:%s] GPIO#%d Value: %d \n", 
-							__FILENAME__, __LINE__, __FUNCTION__, nPinNum, gpio_get_value(nPinNum));
-					mdelay(1000);
-				}
-				#endif
-            }
-        }
-    }
+		iounmap(iomem);
+	}
 #endif	// #if 0
 }
 
-static int ResetPhyLAN8710A(void)
-{
-    int nErr = 0;
-	int nPinNum = 467;
 
-	if(!gpio_is_valid(nPinNum)) {
-	    printk(KERN_ERR "[%s:%4d:%s] Invalid GPIO... (%d) \n", 
-    	        __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
-	    return -EIO;
-	}
-	else {
-        nErr = gpio_request(nPinNum, "ResetPhyLAN8710A");
-        if (nErr) {
-		    printk(KERN_ERR "[%s:%4d:%s] Failed to request gpio#%d\n", 
-                __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
-		    return -EIO;
-	    }
-
-
-
-	    nErr = gpio_request_one(nPinNum, GPIOF_OUT_INIT_HIGH, "ResetPhyLAN8710A");
-	    if( nErr != 0 ) {
-	        printk(KERN_ERR "[%s:%4d:%s] Failed to request GPIO pin#%i...\n", 
-           	        __FILENAME__, __LINE__, __FUNCTION__, nPinNum);
-            return -EIO;
-        }
-        else
-        {
-            printk(KERN_ERR "[%s:%4d:%s] GPIO Value: %d \n", 
-           	        __FILENAME__, __LINE__, __FUNCTION__, gpio_get_value(nPinNum));
-
-            gpio_set_value(nPinNum, 0);
-
-            printk(KERN_ERR "[%s:%4d:%s] GPIO Value: %d \n", 
-           	        __FILENAME__, __LINE__, __FUNCTION__, gpio_get_value(nPinNum));
-
-            gpio_set_value(nPinNum, 1);
-
-            printk(KERN_ERR "[%s:%4d:%s] GPIO Value: %d \n", 
-           	        __FILENAME__, __LINE__, __FUNCTION__, gpio_get_value(nPinNum));
-        }
-    }
-
-    return nErr;
-}
-
-static int InitGpioKeyFPGA(void)
+static int InitGpioKeyFPGA(int nPinNum)
 {
 	int nErr = 0;
-	int nPinNum = g_nGpioNum_FPGA_INTR;
+	//int nPinNum = g_nGpioNum_FPGA_INTR;
 
 	if(!gpio_is_valid(nPinNum)) {
 	    printk(KERN_ERR "[%s:%4d:%s] Invalid GPIO... (%d) \n", 
@@ -433,7 +426,7 @@ static int InitGpioKeyFPGA(void)
     //irq_set_irq_type ( g_nGpioToIrq_FPGA_INTR, IRQ_TYPE_EDGE_FALLING );
 
     if (nErr) {
-        printk(KERN_ERR "[%s:%4d:%s] The requested IRQ line#%i from GPIO#%i (err %i)\n",
+        printk(KERN_ERR "[%s:%4d:%s] Failed to request IRQ line#%i from GPIO#%i (err %i)\n",
 			    __FILENAME__, __LINE__, __FUNCTION__, g_nGpioToIrq_FPGA_INTR, nPinNum, nErr);
         return -EIO;
     }
@@ -453,6 +446,7 @@ static int kisan_gpio_intr_probe(struct platform_device *pdev)
 	struct StructKisanGpioIntrData *pdata = NULL;
 	struct device_node *np = pdev->dev.of_node;
 	int nErr = 0;
+
  	unsigned int unDeviceTreeNode = 0;
 
 	pdata = devm_kzalloc(&pdev->dev, sizeof(struct StructKisanGpioIntrData), GFP_KERNEL);
@@ -478,15 +472,6 @@ static int kisan_gpio_intr_probe(struct platform_device *pdev)
  	// platform_device 에 사용할 고유의 구조체 설정
 	platform_set_drvdata(pdev, pdata);
 
-    
-    TestGpio();
-		
-	
-
-
-
-/*
-
 	if (!of_property_read_u32(np, "mode", &unDeviceTreeNode)) {
 #if defined( DBG_MSG_ON_KISAN_GPIO_INTR )
 		printk(KERN_DEBUG "[%s:%4d] Read DT: mode(%d)\n", __FILENAME__, __LINE__, unDeviceTreeNode);
@@ -507,29 +492,28 @@ static int kisan_gpio_intr_probe(struct platform_device *pdev)
 		printk(KERN_ERR "[%s:%4d] Failed to Read DT: gpio-key-fpga\n", __FILENAME__, __LINE__);
 	}
 	
-    nErr = InitGpioKeyFPGA();
-	if(nErr == -EIO) {
-		printk(KERN_ERR "[%s:%4d] Failed to set Front Key gpio(s).\n", __FILENAME__, __LINE__);
+	// NOTE::2023-05-17
+	// 커널 빌트인으로 이미지에 탑재하여 실행하면 동작하지 않고,
+	// 커널 모듈로 Init Process 에서 실행해야만 동작하는 이슈가 있음
+	if((g_nGpioNum_FPGA_INTR >= 311 && g_nGpioNum_FPGA_INTR <= 362) ||		// gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio: GPIO1_0 ~ GPIO1_51
+		(g_nGpioNum_FPGA_INTR >= 399 && g_nGpioNum_FPGA_INTR <= 485) ||		// gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio: GPIO0_0 ~ GPIO0_86
+		(g_nGpioNum_FPGA_INTR >= 486 && g_nGpioNum_FPGA_INTR <= 509))		// gpiochip1: GPIOs 486-509, parent: platform/4201000.gpio, 4201000.gpio: MCU_GPIO0_0 ~ MCU_GPIO0_23
+	{
+		nErr = InitGpioKeyFPGA(g_nGpioNum_FPGA_INTR);
+		if(nErr == -EIO) {
+			printk(KERN_ERR "[%s:%4d] Failed to set Front Key gpio(s).\n", __FILENAME__, __LINE__);
+		}
+		else
+		{
+			printk(KERN_DEBUG "[%s:%4d] Success to set Front Key IRQ(s).\n", __FILENAME__, __LINE__);
+		}
 	}
 	else
 	{
-		printk(KERN_DEBUG "[%s:%4d] Success to set Front Key IRQ(s).\n", __FILENAME__, __LINE__);
+		printk(KERN_ERR "[%s:%4d] Failed to assign: gpio-key-fpga to GPIO(%d)\n", __FILENAME__, __LINE__, g_nGpioNum_FPGA_INTR);
 	}
-    
 
-
-
-
-    ResetPhyLAN8710A();
-
-
-*/
-
-
-
-
-
-
+	// TestGpio();
 
 	printk(KERN_DEBUG "[%s:%4d] Registered kisan_gpio_intr char driver. \n",
 			__FILENAME__, __LINE__);
@@ -591,4 +575,3 @@ module_platform_driver(kisan_gpio_intr_driver);
 MODULE_DESCRIPTION("AM623x Kisan System B/D GPIO Interrupt Driver");
 MODULE_AUTHOR("hong.yongje@kisane.com");
 MODULE_LICENSE("Dual BSD/GPL");
-

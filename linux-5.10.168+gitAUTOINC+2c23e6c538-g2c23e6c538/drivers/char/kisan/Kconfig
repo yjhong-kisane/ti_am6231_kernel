@@ -24,5 +24,12 @@ config KISAN_AM623x_GPIO_INTR
     help
        Kisan GPIO Interrupt Driver For AM623x.
 
+config KISAN_AM623x_GPIO_HANDLER
+    tristate "Kisan GPIO Handler Driver For AM623x"
+    depends on KISAN_AM623x_CHAR
+    default n
+    help
+       Kisan GPIO Handler Driver For AM623x.
+
 endmenu
 

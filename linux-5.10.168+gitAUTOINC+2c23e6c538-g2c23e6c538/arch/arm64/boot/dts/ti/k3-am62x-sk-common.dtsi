@@ -290,8 +290,16 @@
 		pinctrl-0 = <&kisan_gpio_intr_pins_default>;
 
 		mode = <0>;
-		gpio-key-fpga = <361>;	// (C20) USB0_DRVVBUS.GPIO1_50
-		//gpio-key-fpga = <399>;		// H24 CPU_BOARD_VER0 (GPIO0_0)
+		gpio-key-fpga = <0>;	// 2023-05-17 현재 미사용
+		//gpio-key-fpga = <399>;	// H24 CPU_BOARD_VER0 (GPIO0_0) 임시 테스트
+	};
+
+	kisan_gpio_handler {
+		compatible = "kisan_gpio_handler";
+		status = "okay";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&kisan_gpio_handler_pins_default>;
 	};
 };
 
@@ -555,17 +563,26 @@
 		>;
 	};
 
-	touch_intr_pins_default: touch-intr-pins-default{
+	touch_intr_pins_default: touch-intr-pins-default {
 		pinctrl-single,pins = <
 			// L24 0x000f_4088 TOUCH_INT
 			AM62X_IOPAD(0x088, PIN_INPUT, 7)	// (L24) GPMC0_OEn_REn.GPIO0_33
 		>;
 	};
 
-	kisan_gpio_intr_pins_default: kisan-gpio-intr-pins-default{
+	kisan_gpio_intr_pins_default: kisan-gpio-intr-pins-default {
 		pinctrl-single,pins = <
-			AM62X_IOPAD(0x000, PIN_OUTPUT, 7) // (H24) GPIO0_0 (CPU_BOARD_VER0)
+			// NOTE::2023-05-17
+			// GPIO0_0, GPIO0_1 쇼트시켜 임시 테스트
+			AM62X_IOPAD(0x000, PIN_INPUT, 7) // (H24) GPIO0_0 (CPU_BOARD_VER0)
 			AM62X_IOPAD(0x004, PIN_OUTPUT, 7) // (G25) GPIO0_1 (CPU_BOARD_VER1)
+		>;
+	};
+
+	kisan_gpio_handler_pins_default: kisan-gpio-handler-pins-default {
+		pinctrl-single,pins = <
+			//AM62X_IOPAD(0x000, PIN_OUTPUT, 7) // (H24) GPIO0_0 (CPU_BOARD_VER0)
+			//AM62X_IOPAD(0x004, PIN_OUTPUT, 7) // (G25) GPIO0_1 (CPU_BOARD_VER1)
 			AM62X_IOPAD(0x008, PIN_OUTPUT, 7) // (J24) GPIO0_2 (CPU_BOARD_VER2)
 
 			AM62X_IOPAD(0x00c, PIN_OUTPUT, 7) // (E25) GPIO0_3 (VERSION0)
@@ -574,8 +591,7 @@
 			AM62X_IOPAD(0x02c, PIN_OUTPUT, 7) // (F23) GPIO0_11 (AM6232_STATUS_LED1)
 			AM62X_IOPAD(0x034, PIN_OUTPUT, 7) // (H21) GPIO0_13 (AM6232_STATUS_LED3)
 			AM62X_IOPAD(0x038, PIN_OUTPUT, 7) // (E24) GPIO0_14 (AM6232_STATUS_LED2)
-
-			AM62X_IOPAD(0x114, PIN_OUTPUT, 7) // (B24) GPIO0_68 (AM6232_PRU_STATUS -> LAN8710_RESET)
+			AM62X_IOPAD(0x114, PIN_OUTPUT, 7) // (B24) GPIO0_68 (AM6232_PRU_STATUS)
 		>;
 	};
 };
@@ -905,6 +921,9 @@
 };
 
 &usb0 {
+	// AM6232_HOST_USB0_DP : (AD11) USB0_DP
+	// AM6232_HOST_USB0_DM : (AE11) USB0_DM
+
 	dr_mode = "host";
 	/*
 	#address-cells = <1>;
@@ -922,6 +941,9 @@
 };
 
 &usb1 {
+	// AM6232_USBtoUART_USB1_DP : (AE9) USB1_DP
+	// AM6232_USBtoUART_USB1_DM : (AD10) USB1_DM
+
 	dr_mode = "host";
 	/*
 	pinctrl-names = "default";
