@@ -1,8 +1,16 @@
-#/bin/bash
+#!/bin/bash
 
-make ARCH=arm64 CROSS_COMPILE=/home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu- menuconfig
+PATH_PROJ=/home/yjhong/kisan/TI_AM62x/board_deposit
+PATH_KERNEL=${PATH_PROJ}/kernel/trunk/linux-5.10.168
+
+TI_SDK_PATH=/home/yjhong/kisan/TI_AM62x/ti-processor-sdk-linux-am62xx-evm-08.06.00.42
+CC_ARMV8=${TI_SDK_PATH}/linux-devkit/sysroots/x86_64-arago-linux/usr/bin/aarch64-none-linux-gnu-
+#CC_ARMV7=${TI_SDK_PATH}/linux-devkit/sysroots/x86_64-arago-linux/usr/bin/arm-none-linux-gnueabihf-
+
+#make ARCH=arm64 CROSS_COMPILE=/home/yjhong/kisan/TI_AM6231/toolchain/gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu/bin/aarch64-none-linux-gnu- menuconfig
+
+make ARCH=arm64 CROSS_COMPILE=${CC_ARMV8} menuconfig
 
 cp .config arch/arm64/configs/kisan_s1_defconfig
 
 sync
-
