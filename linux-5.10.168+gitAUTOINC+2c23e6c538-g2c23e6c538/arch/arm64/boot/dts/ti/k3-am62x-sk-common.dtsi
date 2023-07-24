@@ -334,7 +334,7 @@
 		>;
 	};
 
-	/*
+	// iNAND eMMC
 	main_mmc0_pins_default: main-mmc0-pins-default {
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x220, PIN_INPUT, 0) // (Y3) MMC0_CMD
@@ -349,8 +349,8 @@
 			AM62X_IOPAD(0x1f8, PIN_INPUT, 0) // (AC2) MMC0_DAT7
 		>;
 	};
-	*/
-
+	
+	// Micro SD
 	main_mmc1_pins_default: main-mmc1-pins-default {
 		pinctrl-single,pins = <
 			AM62X_IOPAD(0x23c, PIN_INPUT, 0) /* (A21) MMC1_CMD */
@@ -884,13 +884,24 @@
 };
 
 &sdhci0 {
-/*
+	// iNAND eMMC
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mmc0_pins_default>;
 	ti,driver-strength-ohm = <50>;
 	disable-wp;
-*/
-	status = "disabled";
+
+	//NOTE::2023-07-21
+	// HS 로 속도 제한 걸지 않으면 
+	// SK EVM 보드에서 파일 write 시 running CQE recovery 문제 발생함
+	no-1-8-v;	//  disable SD card HS modes.
+	
+	// NOTE::2023-05-09
+	// https://software-dl.ti.com/processor-sdk-linux/esd/AM62X/08_06_00_42/exports/docs/linux/Foundational_Components/U-Boot/UG-Memory.html
+	// Restricting to a given speed mode
+	//sdhci-caps-mask = <0x00000004 0x00000000>;	// Limit to SDR50
+	//sdhci-caps-mask = <0x00000006 0x00000000>;	// Limit to DDR50
+	sdhci-caps-mask = <0x00000007 0x00000000>;	// Limit to SD HS
+	//sdhci-caps-mask = <0x00000007 0x00200000>;	// Limit to SD legacy
 };
 
 &sdhci1 {
