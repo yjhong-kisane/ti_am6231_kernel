@@ -176,6 +176,7 @@ fi
 # CONFIG_LOCALVERSION and LOCALVERSION (if set)
 res="${res}${CONFIG_LOCALVERSION}${LOCALVERSION}"
 
+:<<"yjhong_20230727"
 # scm version string if not at a tagged commit
 if test "$CONFIG_LOCALVERSION_AUTO" = "y"; then
 	# full scm version string
@@ -190,5 +191,6 @@ else
 		res="$res${scm:++}"
 	fi
 fi
+yjhong_20230727
 
 echo "$res"
