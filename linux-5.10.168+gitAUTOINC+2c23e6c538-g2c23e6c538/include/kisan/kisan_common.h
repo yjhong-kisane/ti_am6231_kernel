@@ -73,8 +73,8 @@
 
 
 
-#define GPIO_TO_BANK(gpio)	((gpio) / 32)
-#define GPIO_TO_PINS(gpio)	((gpio) % 32)
+//#define GPIO_TO_BANK(gpio)	((gpio) / 32)
+//#define GPIO_TO_PINS(gpio)	((gpio) % 32)
 
 
 
@@ -88,13 +88,13 @@
 // NOTE::20200831
 // GPIO Numbering을 기존 AM335x 에서 (32 * n) + x 였던 것과 달리
 // AM572x 에서는 (32 * (n - 1)) + x 로 계산해야 함
-#define GPIO_TO_PIN(bank, bank_gpio) (32 * (bank - 1) + (bank_gpio))
+//#define GPIO_TO_PIN(bank, bank_gpio) (32 * (bank - 1) + (bank_gpio))
 
 
 //-----------------------------------------------------------------------------------------------
 
 // For ~/arch/arm/mach-omap2/board-generic.c
-#define GPIO_PIN_NUM_LAN8710_RESET		GPIO_TO_PIN(3, 30)
+//#define GPIO_PIN_NUM_LAN8710_RESET		GPIO_TO_PIN(3, 30)
 
 
 
@@ -116,9 +116,11 @@
 #define UDP_CMD_KISAN_LTE_ATTACHED              (0x04)
 #define UDP_CMD_KISAN_LTE_DETACHED              (0x05)
 
-#define UDP_CMD_KISAN_COOLING_FAN_STATUS        (0x06)	// NOTE::20220422 Qt Apl 에서 검사하므로 미사용
+#define UDP_CMD_KISAN_USB_BULK_COMM				(0x06)
 
-#define UDP_CMD_KISAN_USB1_OVER_CURRENT         (0x07)
+//#define UDP_CMD_KISAN_COOLING_FAN_STATUS        (0x06)	// NOTE::20220422 Qt Apl 에서 검사하므로 미사용
+
+//#define UDP_CMD_KISAN_USB1_OVER_CURRENT         (0x07)
 
 
 /**
@@ -127,7 +129,7 @@
 @author     hong.yongje@kisane.com
 */
 
-#define ADDR_DDR_CMEM_SHARED_DATA_BUF                       (0x9f000000)	// NOTE:: 20210415, 0x9f00_0000 부터 16 MB (CMEM 0xa000_0000 전 까지) 가용 영역
+#define ADDR_DDR_CMEM_SHARED_DATA_BUF                  (0x9f000000)	// NOTE:: 20210415, 0x9f00_0000 부터 16 MB (CMEM 0xa000_0000 전 까지) 가용 영역
 #define LENGTH_OF_DDR_SHM_DATA_KEY                     (3)    // 3Bytes
 
 

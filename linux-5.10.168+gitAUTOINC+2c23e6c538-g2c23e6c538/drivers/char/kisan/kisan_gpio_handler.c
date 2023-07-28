@@ -1,8 +1,8 @@
 /**
 @file       kisan_gpio_handler.c
 @brief      AM623x System B/D Character Device Driver
-@details    GPIO Interrupt (/dev/kisan_gpio_handler)
-@date       2023-05-17
+@details    GPIO Handler (/dev/kisan_gpio_handler)
+@date       2023-07-11
 @author     hong.yongje@kisane.com
 */
 
@@ -11,10 +11,10 @@
 #include <linux/module.h>
 
 #include <linux/gpio.h>          // gpio_set/get_value
-#include <linux/input.h>                // system call
-#include <linux/uaccess.h>              // copy_to_user, copy_from_user
+#include <linux/input.h>         // system call
+#include <linux/uaccess.h>       // copy_to_user, copy_from_user
 #include <asm/io.h>              // ioremap
-#include <linux/delay.h>            // mdelay
+#include <linux/delay.h>         // mdelay
 
 #include <kisan/kisan_common.h>
 #include <kisan/cslr_soc_baseaddress.h>
@@ -26,22 +26,7 @@ struct StructKisanGpioHandlerData {
 	struct miscdevice mdev;
 };
 
-
-static void __iomem *g_ptrCM_REGS_WKUPAON;		// CSL_MPU_WKUPAON_CM_REGS
-static void __iomem *g_ptrCM_REGS_L4PER;		// CSL_MPU_L4PER_CM_CORE_REGS
-
-static void __iomem *g_ptrGpioBase1;
-static void __iomem *g_ptrGpioBase2;
-static void __iomem *g_ptrGpioBase3;
-static void __iomem *g_ptrGpioBase4;
-static void __iomem *g_ptrGpioBase5;
-static void __iomem *g_ptrGpioBase6;
-static void __iomem *g_ptrGpioBase7;
-static void __iomem *g_ptrGpioBase8;
-
-
 static int g_nDbgMsgFlag = __OFF__;
-static int g_nToggleReset = __OFF__;
 
 struct structGpioHandler {
     int nCmdType;   // 0=SetDirection, 1=GetDirection, 2=SetValue, 3=GetValue, 4=TogglePin
@@ -65,633 +50,706 @@ typedef enum {
 extern void BitsDisplayU32(unsigned int unVal);
 
 
+static int GetGpioBankNum(int nGpioNum);
+static int GetGpioRegBit(int nGpioNum);
+static int GetGpioDirection(int nGpioInstanceNum, int nGpioNum);
+static int SetGpioDirection(int nGpioInstanceNum, int nGpioNum, int nDirection);
+static int GetGpioValue(int nGpioInstanceNum, int nGpioNum);
+static int SetGpioValue(int nGpioInstanceNum, int nGpioNum, int nLowHi);
+static int ToggleGpioPin(int nGpioBank, int nGpioNum, int nMilliSec);
 
-static int GetGpioDirection(int nGpioBank, int nGpioNum)
+
+static int GetGpioBankNum(int nGpioNum)
 {
-//    unsigned int unRegVal = 0x00000000;
-    int nRet = 0;
-
-    void __iomem *iomem = NULL;
-
-    if( (nGpioBank < 1) || (nGpioBank > 8) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Bank (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank);
-        return -1;
-    }
-
-    if( (nGpioNum < 0) || (nGpioNum > 31) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Num (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioNum);
-        return -1;
-    }
-
-    switch(nGpioBank) {
-        case 1:    iomem = g_ptrGpioBase1;    break;
-        case 2:    iomem = g_ptrGpioBase2;    break;
-        case 3:    iomem = g_ptrGpioBase3;    break;
-		case 4:    iomem = g_ptrGpioBase4;	  break;
-		case 5:    iomem = g_ptrGpioBase5;	  break;
-		case 6:    iomem = g_ptrGpioBase6;	  break;
-		case 7:    iomem = g_ptrGpioBase7;	  break;
-		case 8:    iomem = g_ptrGpioBase8;	  break;
-    }
-
-/*
-    unRegVal = ioread32 (iomem + GPIO_OE);
-    nRet = BIT_CHECK(unRegVal, nGpioNum);
-
-    if(g_nDbgMsgFlag == __ON__) {
-        printk(KERN_DEBUG "[%s:%4d:%s] Read GPIO%d_%d direction: %d (0=Out, 1=In) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, nRet);
-        BitsDisplayU32(unRegVal);
-    }
-*/
-
-    return nRet;
+	/*
+		DATASHEET pg. 63~65, Table 6-22, 6-23
+		TRM pg. 2375~2376, GPIO1 Register/Pin Mapping
+	*/
+	return nGpioNum / 16;
 }
 
-
-static int SetGpioDirection(int nGpioBank, int nGpioNum, int nDirection)
+static int GetGpioRegBit(int nGpioNum)
 {
-    //unsigned int unRegVal = 0x00000000;
-    void __iomem *iomem = NULL;
-	//int i = 0;
-
-    if( (nGpioBank < 1) || (nGpioBank > 8) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Bank (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank);
-        return -1;
-    }
-
-    if( (nGpioNum < 0) || (nGpioNum > 31) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Num (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioNum);
-        return -1;
-    }
-
-    if( (nDirection != __IN__) && (nDirection != __OUT__) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio direction (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nDirection);
-        return -1;
-    }
-
-    switch(nGpioBank) {
-        case 1:    iomem = g_ptrGpioBase1;    break;
-        case 2:    iomem = g_ptrGpioBase2;    break;
-        case 3:    iomem = g_ptrGpioBase3;    break;
-		case 4:    iomem = g_ptrGpioBase4;	  break;
-		case 5:    iomem = g_ptrGpioBase5;	  break;
-		case 6:    iomem = g_ptrGpioBase6;	  break;
-		case 7:    iomem = g_ptrGpioBase7;	  break;
-		case 8:    iomem = g_ptrGpioBase8;	  break;
-    }
-
-/*
-    unRegVal = ioread32 (iomem + GPIO_OE);
-
-    //unRegVal |= (nDirection << nGpioNum);
-    if(nDirection == __OUT__)
-	{
-        BIT_CLR(unRegVal, nGpioNum);
-	    iowrite32 (unRegVal, iomem + GPIO_OE);
-		
-		for(i = 0 ; i < 2 ; i++)
-		{
-//			unRegVal = ioread32 (iomem + GPIO_IRQWAKEN(i));
-//			BIT_CLR(unRegVal, nGpioNum);
-//			iowrite32 (unRegVal, iomem + GPIO_IRQWAKEN(i)); 
-			
-			unRegVal = ioread32 (iomem + GPIO_IRQSTATUS_SET(i));
-			BIT_CLR(unRegVal, nGpioNum);
-			iowrite32 (unRegVal, iomem + GPIO_IRQSTATUS_SET(i)); 
-		}
-	}
-    else if(nDirection == __IN__)
-	{
-        BIT_SET(unRegVal, nGpioNum);
-	    iowrite32 (unRegVal, iomem + GPIO_OE); 
-
-		for(i = 0 ; i < 2 ; i++)
-		{
-//		    unRegVal = ioread32 (iomem + GPIO_IRQWAKEN(i));
-//	        BIT_SET(unRegVal, nGpioNum);
-//		    iowrite32 (unRegVal, iomem + GPIO_IRQWAKEN(i)); 
-			
-			unRegVal = ioread32 (iomem + GPIO_IRQSTATUS_SET(i));
-			BIT_SET(unRegVal, nGpioNum);
-			iowrite32 (unRegVal, iomem + GPIO_IRQSTATUS_SET(i)); 
-		}
-	}
-
-
-	if(g_nDbgMsgFlag == __ON__) {
-		printk(KERN_DEBUG "[%s:%4d:%s] GPIO%d_%d set direction to %d (0=Out, 1=In) \n",
-			__FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, nDirection);
-		BitsDisplayU32(unRegVal);
-	}
-	else {
-		if(g_nToggleReset == __ON__)
-		{
-			mdelay(2);
-		}
-	}
-
-*/
-
-    return 0;
+	/*
+		DATASHEET pg. 63~65, Table 6-22, 6-23
+		TRM pg. 2375~2376, GPIO1 Register/Pin Mapping
+	*/
+	return nGpioNum % 32;
 }
 
-
-static int GetGpioValue(int nGpioBank, int nGpioNum)
-{
-    //unsigned int unRegVal = 0x00000000;
-    //void __iomem *iomem = NULL;
-
-    int nRet = 0;
-
-    if( (nGpioBank < 1) || (nGpioBank > 8) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Bank (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank);
-        return -1;
-    }
-
-    if( (nGpioNum < 0) || (nGpioNum > 31) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Num (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioNum);
-        return -1;
-    }
-
 /*
+	GPIO1_0(311)  : Bank(0), RegBit(0)
+	GPIO1_1(312)  : Bank(0), RegBit(1)
+	GPIO1_2(313)  : Bank(0), RegBit(2)
+	GPIO1_3(314)  : Bank(0), RegBit(3)
+	GPIO1_4(315)  : Bank(0), RegBit(4)
+	GPIO1_5(316)  : Bank(0), RegBit(5)
+	GPIO1_6(317)  : Bank(0), RegBit(6)
+	GPIO1_7(318)  : Bank(0), RegBit(7)
+	GPIO1_8(319)  : Bank(0), RegBit(8)
+	GPIO1_9(320)  : Bank(0), RegBit(9)
+	GPIO1_10(321) : Bank(0), RegBit(10)
+	GPIO1_11(322) : Bank(0), RegBit(11)
+	GPIO1_12(323) : Bank(0), RegBit(12)
+	GPIO1_13(324) : Bank(0), RegBit(13)
+	GPIO1_14(325) : Bank(0), RegBit(14)
+	GPIO1_15(326) : Bank(0), RegBit(15)
+	GPIO1_16(327) : Bank(1), RegBit(16)
+	GPIO1_17(328) : Bank(1), RegBit(17)
+	GPIO1_18(329) : Bank(1), RegBit(18)
+	GPIO1_19(330) : Bank(1), RegBit(19)
+	GPIO1_20(331) : Bank(1), RegBit(20)
+	GPIO1_21(332) : Bank(1), RegBit(21)
+	GPIO1_22(333) : Bank(1), RegBit(22)
+	GPIO1_23(334) : Bank(1), RegBit(23)
+	GPIO1_24(335) : Bank(1), RegBit(24)
+	GPIO1_25(336) : Bank(1), RegBit(25)
+	GPIO1_26(337) : Bank(1), RegBit(26)
+	GPIO1_27(338) : Bank(1), RegBit(27)
+	GPIO1_28(339) : Bank(1), RegBit(28)
+	GPIO1_29(340) : Bank(1), RegBit(29)
+	GPIO1_30(341) : Bank(1), RegBit(30)
+	GPIO1_31(342) : Bank(1), RegBit(31)
+	GPIO1_32(343) : Bank(2), RegBit(0)
+	GPIO1_33(344) : Bank(2), RegBit(1)
+	GPIO1_34(345) : Bank(2), RegBit(2)
+	GPIO1_35(346) : Bank(2), RegBit(3)
+	GPIO1_36(347) : Bank(2), RegBit(4)
+	GPIO1_37(348) : Bank(2), RegBit(5)
+	GPIO1_38(349) : Bank(2), RegBit(6)
+	GPIO1_39(350) : Bank(2), RegBit(7)
+	GPIO1_40(351) : Bank(2), RegBit(8)
+	GPIO1_41(352) : Bank(2), RegBit(9)
+	GPIO1_42(353) : Bank(2), RegBit(10)
+	GPIO1_43(354) : Bank(2), RegBit(11)
+	GPIO1_44(355) : Bank(2), RegBit(12)
+	GPIO1_45(356) : Bank(2), RegBit(13)
+	GPIO1_46(357) : Bank(2), RegBit(14)
+	GPIO1_47(358) : Bank(2), RegBit(15)
+	GPIO1_48(359) : Bank(3), RegBit(16)
+	GPIO1_49(360) : Bank(3), RegBit(17)
+	GPIO1_50(361) : Bank(3), RegBit(18)
+	GPIO1_51(362) : Bank(3), RegBit(19)
+
+	GPIO0_0(399)  : Bank(0), RegBit(0)
+	GPIO0_1(400)  : Bank(0), RegBit(1)
+	GPIO0_2(401)  : Bank(0), RegBit(2)
+	GPIO0_3(402)  : Bank(0), RegBit(3)
+	GPIO0_4(403)  : Bank(0), RegBit(4)
+	GPIO0_5(404)  : Bank(0), RegBit(5)
+	GPIO0_6(405)  : Bank(0), RegBit(6)
+	GPIO0_7(406)  : Bank(0), RegBit(7)
+	GPIO0_8(407)  : Bank(0), RegBit(8)
+	GPIO0_9(408)  : Bank(0), RegBit(9)
+	GPIO0_10(409) : Bank(0), RegBit(10)
+	GPIO0_11(410) : Bank(0), RegBit(11)
+	GPIO0_12(411) : Bank(0), RegBit(12)
+	GPIO0_13(412) : Bank(0), RegBit(13)
+	GPIO0_14(413) : Bank(0), RegBit(14)
+	GPIO0_15(414) : Bank(0), RegBit(15)
+	GPIO0_16(415) : Bank(1), RegBit(16)
+	GPIO0_17(416) : Bank(1), RegBit(17)
+	GPIO0_18(417) : Bank(1), RegBit(18)
+	GPIO0_19(418) : Bank(1), RegBit(19)
+	GPIO0_20(419) : Bank(1), RegBit(20)
+	GPIO0_21(420) : Bank(1), RegBit(21)
+	GPIO0_22(421) : Bank(1), RegBit(22)
+	GPIO0_23(422) : Bank(1), RegBit(23)
+	GPIO0_24(423) : Bank(1), RegBit(24)
+	GPIO0_25(424) : Bank(1), RegBit(25)
+	GPIO0_26(425) : Bank(1), RegBit(26)
+	GPIO0_27(426) : Bank(1), RegBit(27)
+	GPIO0_28(427) : Bank(1), RegBit(28)
+	GPIO0_29(428) : Bank(1), RegBit(29)
+	GPIO0_30(429) : Bank(1), RegBit(30)
+	GPIO0_31(430) : Bank(1), RegBit(31)
+	GPIO0_32(431) : Bank(2), RegBit(0)
+	GPIO0_33(432) : Bank(2), RegBit(1)
+	GPIO0_34(433) : Bank(2), RegBit(2)
+	GPIO0_35(434) : Bank(2), RegBit(3)
+	GPIO0_36(435) : Bank(2), RegBit(4)
+	GPIO0_37(436) : Bank(2), RegBit(5)
+	GPIO0_38(437) : Bank(2), RegBit(6)
+	GPIO0_39(438) : Bank(2), RegBit(7)
+	GPIO0_40(439) : Bank(2), RegBit(8)
+	GPIO0_41(440) : Bank(2), RegBit(9)
+	GPIO0_42(441) : Bank(2), RegBit(10)
+	GPIO0_43(442) : Bank(2), RegBit(11)
+	GPIO0_44(443) : Bank(2), RegBit(12)
+	GPIO0_45(444) : Bank(2), RegBit(13)
+	GPIO0_46(445) : Bank(2), RegBit(14)
+	GPIO0_47(446) : Bank(2), RegBit(15)
+	GPIO0_48(447) : Bank(3), RegBit(16)
+	GPIO0_49(448) : Bank(3), RegBit(17)
+	GPIO0_50(449) : Bank(3), RegBit(18)
+	GPIO0_51(450) : Bank(3), RegBit(19)
+	GPIO0_52(451) : Bank(3), RegBit(20)
+	GPIO0_53(452) : Bank(3), RegBit(21)
+	GPIO0_54(453) : Bank(3), RegBit(22)
+	GPIO0_55(454) : Bank(3), RegBit(23)
+	GPIO0_56(455) : Bank(3), RegBit(24)
+	GPIO0_57(456) : Bank(3), RegBit(25)
+	GPIO0_58(457) : Bank(3), RegBit(26)
+	GPIO0_59(458) : Bank(3), RegBit(27)
+	GPIO0_60(459) : Bank(3), RegBit(28)
+	GPIO0_61(460) : Bank(3), RegBit(29)
+	GPIO0_62(461) : Bank(3), RegBit(30)
+	GPIO0_63(462) : Bank(3), RegBit(31)
+	GPIO0_64(463) : Bank(4), RegBit(0)
+	GPIO0_65(464) : Bank(4), RegBit(1)
+	GPIO0_66(465) : Bank(4), RegBit(2)
+	GPIO0_67(466) : Bank(4), RegBit(3)
+	GPIO0_68(467) : Bank(4), RegBit(4)
+	GPIO0_69(468) : Bank(4), RegBit(5)
+	GPIO0_70(469) : Bank(4), RegBit(6)
+	GPIO0_71(470) : Bank(4), RegBit(7)
+	GPIO0_72(471) : Bank(4), RegBit(8)
+	GPIO0_73(472) : Bank(4), RegBit(9)
+	GPIO0_74(473) : Bank(4), RegBit(10)
+	GPIO0_75(474) : Bank(4), RegBit(11)
+	GPIO0_76(475) : Bank(4), RegBit(12)
+	GPIO0_77(476) : Bank(4), RegBit(13)
+	GPIO0_78(477) : Bank(4), RegBit(14)
+	GPIO0_79(478) : Bank(4), RegBit(15)
+	GPIO0_80(479) : Bank(5), RegBit(16)
+	GPIO0_81(480) : Bank(5), RegBit(17)
+	GPIO0_82(481) : Bank(5), RegBit(18)
+	GPIO0_83(482) : Bank(5), RegBit(19)
+	GPIO0_84(483) : Bank(5), RegBit(20)
+	GPIO0_85(484) : Bank(5), RegBit(21)
+	GPIO0_86(485) : Bank(5), RegBit(22)
+GPIO0_87(486) : Bank(5), RegBit(23) <- MCU_GPIO0_0 중복(486)
+GPIO0_88(487) : Bank(5), RegBit(24) <- MCU_GPIO0_1 중복(487)
+GPIO0_89(488) : Bank(5), RegBit(25) <- MCU_GPIO0_2 중복(488)
+GPIO0_90(489) : Bank(5), RegBit(26) <- MCU_GPIO0_3 중복(489)
+GPIO0_91(490) : Bank(5), RegBit(27) <- MCU_GPIO0_4 중복(490)
+
+	MCU_GPIO0_0(486)  : Bank(0), RegBit(0)
+	MCU_GPIO0_1(487)  : Bank(0), RegBit(1)
+	MCU_GPIO0_2(488)  : Bank(0), RegBit(2)
+	MCU_GPIO0_3(489)  : Bank(0), RegBit(3)
+	MCU_GPIO0_4(490)  : Bank(0), RegBit(4)
+	MCU_GPIO0_5(491)  : Bank(0), RegBit(5)
+	MCU_GPIO0_6(492)  : Bank(0), RegBit(6)
+	MCU_GPIO0_7(493)  : Bank(0), RegBit(7)
+	MCU_GPIO0_8(494)  : Bank(0), RegBit(8)
+	MCU_GPIO0_9(495)  : Bank(0), RegBit(9)
+	MCU_GPIO0_10(496) : Bank(0), RegBit(10)
+	MCU_GPIO0_11(497) : Bank(0), RegBit(11)
+	MCU_GPIO0_12(498) : Bank(0), RegBit(12)
+	MCU_GPIO0_13(499) : Bank(0), RegBit(13)
+	MCU_GPIO0_14(500) : Bank(0), RegBit(14)
+	MCU_GPIO0_15(501) : Bank(0), RegBit(15)
+	MCU_GPIO0_16(502) : Bank(1), RegBit(16)
+	MCU_GPIO0_17(503) : Bank(1), RegBit(17)
+	MCU_GPIO0_18(504) : Bank(1), RegBit(18)
+	MCU_GPIO0_19(505) : Bank(1), RegBit(19)
+	MCU_GPIO0_20(506) : Bank(1), RegBit(20)
+	MCU_GPIO0_21(507) : Bank(1), RegBit(21)
+	MCU_GPIO0_22(508) : Bank(1), RegBit(22)
+	MCU_GPIO0_23(509) : Bank(1), RegBit(23)
+*/
+
 #if 1
-    switch(nGpioBank) {
-        case 1:    iomem = g_ptrGpioBase1;    break;
-        case 2:    iomem = g_ptrGpioBase2;    break;
-        case 3:    iomem = g_ptrGpioBase3;    break;
-		case 4:    iomem = g_ptrGpioBase4;	  break;
-		case 5:    iomem = g_ptrGpioBase5;	  break;
-		case 6:    iomem = g_ptrGpioBase6;	  break;
-		case 7:    iomem = g_ptrGpioBase7;	  break;
-		case 8:    iomem = g_ptrGpioBase8;	  break;
-    }
+static unsigned short m_ausGpio0[128];
+static unsigned short m_ausGpio1[128];
+//static unsigned short m_ausMCU_Gpio0[128];
 
-	unRegVal = ioread32(iomem + GPIO_OE);
+static void SetGpioLUT(void);
+static int GetGpioLUT(int nGpioInstanceNum, int nGpioNum);
 
-//    if( (BIT_CHECK(unRegVal, nGpioNum)) != __OUT__ ) {
-//        printk(KERN_DEBUG "[%s:%4d:%s] GPIO%d_%d direction is not out, can not set value. \n",
-//            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum);
-//        return -1;
-//    }
 
-	if( (BIT_CHECK(unRegVal, nGpioNum)) == __OUT__ )
+static void SetGpioLUT(void)
+{
+	int i = 0;
+	int nPinNum = 0;
+
+	memset(m_ausGpio1, 0, sizeof(m_ausGpio1));
+	memset(m_ausGpio0, 0, sizeof(m_ausGpio0));
+	//memset(m_ausMCU_Gpio0, 0, sizeof(m_ausMCU_Gpio0));
+
+	// gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio: GPIO1_0 ~ GPIO1_51
+	nPinNum = 311;
+	for(i = 0 ; i <= 51 ; i++)
 	{
-	    unRegVal = ioread32(iomem + GPIO_DATAOUT);
+		if(!gpio_is_valid(nPinNum)) {
+	    	printk(KERN_ERR "[%s:%4d] Invalid GPIO1_%d \n", __FILENAME__, __LINE__, nPinNum);
+		}
+		else {
+			m_ausGpio1[i] = nPinNum;
+			/*
+			printk(KERN_DEBUG "[%s:%4d] GPIO1_%d(%d) : Bank(%d), RegBit(%d) \n", 
+				__FILENAME__, __LINE__, i, nPinNum, GetGpioBankNum(i), GetGpioRegBit(i));
+			*/
+		}
+		nPinNum++;
+	}
+
+	// gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio: GPIO0_0 ~ GPIO0_86
+	nPinNum = 399;
+	for(i = 0 ; i <= 86 ; i++)
+	{
+		if(!gpio_is_valid(nPinNum)) {
+	    	printk(KERN_ERR "[%s:%4d] Invalid GPIO0_%d \n", __FILENAME__, __LINE__, nPinNum);
+		}
+		else {
+			m_ausGpio0[i] = nPinNum;
+			/*
+			printk(KERN_DEBUG "[%s:%4d] GPIO0_%d(%d) : Bank(%d), RegBit(%d) \n", 
+				__FILENAME__, __LINE__, i, nPinNum, GetGpioBankNum(i), GetGpioRegBit(i));
+			*/
+		}
+		nPinNum++;
+	}
+
+#if 0
+	// gpiochip1: GPIOs 486-509, parent: platform/4201000.gpio, 4201000.gpio: MCU_GPIO0_0 ~ MCU_GPIO0_23
+	nPinNum = 486;
+	for(i = 0 ; i <= 23 ; i++)
+	{
+		if(!gpio_is_valid(nPinNum)) {
+	    	printk(KERN_ERR "[%s:%4d] Invalid MCU_GPIO0_%d \n", __FILENAME__, __LINE__, nPinNum);
+		}
+		else {
+			m_ausMCU_Gpio0[i] = nPinNum;
+			/*
+			printk(KERN_DEBUG "[%s:%4d] MCU_GPIO0_%d(%d) : Bank(%d), RegBit(%d) \n", 
+				__FILENAME__, __LINE__, i, nPinNum, GetGpioBankNum(i), GetGpioRegBit(i));
+			*/
+		}
+		nPinNum++;
+	}
+#endif	// #if 0
+
+	return;
+}
+
+static int GetGpioLUT(int nGpioInstanceNum, int nGpioNum)
+{
+	int nGpioNumLUT = -1;
+
+	if(nGpioInstanceNum == 1)
+	{
+		// gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio: GPIO1_0 ~ GPIO1_51
+		if( (nGpioNum < 0) || (nGpioNum > 51) ) {
+			printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Num (%d) \n",
+				__FILENAME__, __LINE__, __FUNCTION__, nGpioNum);
+			return -1;
+		}
+		else {
+			nGpioNumLUT = m_ausGpio1[nGpioNum];
+		}
+	}
+	else if(nGpioInstanceNum == 0)
+	{
+		// gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio: GPIO0_0 ~ GPIO0_86
+		if( (nGpioNum < 0) || (nGpioNum > 86) ) {
+			printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Num (%d) \n",
+				__FILENAME__, __LINE__, __FUNCTION__, nGpioNum);
+			return -1;
+		}
+		else {
+			nGpioNumLUT = m_ausGpio0[nGpioNum];
+		}
 	}
 	else
 	{
-	    unRegVal = ioread32(iomem + GPIO_DATAIN);
+		printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Instance Number (%d) \n",
+            __FILENAME__, __LINE__, __FUNCTION__, nGpioInstanceNum);
+        return -1;
 	}
-	
 
-    if(BIT_CHECK(unRegVal, nGpioNum))
-        nRet = __HI__;
-    else
-        nRet = __LO__;
+	return nGpioNumLUT;
+}
+#endif	// #if 0
 
-    if(g_nDbgMsgFlag == __ON__) {
-        printk(KERN_DEBUG "[%s:%4d:%s] Get GPIO%d_%d value < %s \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, (nRet == __LO__ ? "Low(0)" : "Hi(1)"));
-        BitsDisplayU32(unRegVal);
-    }
-
-#else
-	// API 사용 시 레지스터를 직접 제어하는 것에 비해 느림
-    nRet = gpio_get_value((32 * (nGpioBank - 1) + nGpioNum);
-#endif
+/*
+	TRM pg. 8781, 12.2.5.1 GPIO Registers
+	Table 12-366. mem, GPIO0_ Registers, Base Address=0060_0000H, Length=256
+	----------------------------------------------------------------------
+	Offset  Length Register Name  GPIO0          GPIO1          MCU_GPIO0
+	----------------------------------------------------------------------
+	...
+	10h     32     GPIO_DIR01     0060_0010h     0060_1010h     0420_1010h
+	...
+	38h     32     GPIO_DIR23     0060_0038h     0060_1038h     0420_1038h
+	...
+	60h     32     GPIO_DIR45     0060_0060h     0060_1060h     0420_1060h
+	...
+	88h     32     GPIO_DIR67     0060_0088h     0060_1088h     0420_1088h
+	...
+	B0h     32     GPIO_DIR8      0060_00B0h     0060_10B0h     0420_10B0h
+	...
 */
+static int GetGpioDirection(int nGpioInstanceNum, int nGpioNum)
+{
+	int nRet = -1;
+    void __iomem *iomem;
+	unsigned int unRegVal = 0;
+	unsigned int unOffset = 0;
+
+	int nGpioBank = GetGpioBankNum(nGpioNum);
+	int nGpioRegBit = GetGpioRegBit(nGpioNum);
+
+	//TRM P.8781 - 12.2.5.1 GPIO Registers
+	//Table 12-366. mem, GPIO0_ Registers, Base Address=0060 0000H, Length=256
+	if(nGpioInstanceNum == 0) {
+		iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
+	} 
+	else if(nGpioInstanceNum == 1) {
+		iomem = ioremap(CSL_GPIO1_BASE, CSL_GPIO1_SIZE);	// 0x60_1000
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
+
+	if(!iomem) {
+        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_GPIO#_BASE.\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+        return -1;
+    }
+	
+	unOffset = 0x10;	// GPIO_DIR01
+	if(nGpioBank == 0 || nGpioBank == 1) {
+		unOffset += (0x28 * 0);
+	}
+	else if(nGpioBank == 2 || nGpioBank == 3) {
+		unOffset += (0x28 * 1);
+	}
+	else if(nGpioBank == 4 || nGpioBank == 5) {
+		unOffset += (0x28 * 2);
+	}
+	else if(nGpioBank == 6 || nGpioBank == 7) {
+		unOffset += (0x28 * 3);
+	}
+	else if(nGpioBank == 8) {
+		unOffset += (0x28 * 4);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		iounmap(iomem);
+		return -1;
+	}
+
+	unRegVal = ioread32(iomem + unOffset);
+	iounmap(iomem);
+
+	nRet = BITS_EXTRACT(BIT_CHECK(unRegVal, nGpioRegBit), 1, nGpioRegBit);
+
+	//printk(KERN_DEBUG "[%s:%4d] Offset(0x%x), RegVal(0x%x), RegBit(%d), Ret(%d)\n", 
+	//	__FILENAME__, __LINE__, unOffset, unRegVal, nGpioRegBit, nRet);
 
     return nRet;
 }
 
-
-static int SetGpioValue(int nGpioBank, int nGpioNum, int nLowHi)
+static int SetGpioDirection(int nGpioInstanceNum, int nGpioNum, int nDirection)
 {
 #if 1
-    //unsigned int unRegVal = 0x00000000;
-    //void __iomem *iomem = NULL;
-
-    if( (nGpioBank < 1) || (nGpioBank > 8) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Bank (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank);
-        return -1;
-    }
-
-    if( (nGpioNum < 0) || (nGpioNum > 31) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Num (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioNum);
-        return -1;
-    }
-
-    if( (nLowHi != __LO__) && (nLowHi != __HI__) ) {
-        printk(KERN_ERR "[%s:%4d:%s] Wrong Gpio Value (%d) \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nLowHi);
-        return -1;
-    }
-/*
-    switch(nGpioBank) {
-        case 1:    iomem = g_ptrGpioBase1;    break;
-        case 2:    iomem = g_ptrGpioBase2;    break;
-        case 3:    iomem = g_ptrGpioBase3;    break;
-		case 4:    iomem = g_ptrGpioBase4;	  break;
-		case 5:    iomem = g_ptrGpioBase5;	  break;
-		case 6:    iomem = g_ptrGpioBase6;	  break;
-		case 7:    iomem = g_ptrGpioBase7;	  break;
-		case 8:    iomem = g_ptrGpioBase8;	  break;
-    }
-
-	// TRM Pg. 7103
-
-    unRegVal = ioread32(iomem + GPIO_OE);
-    if( (BIT_CHECK(unRegVal, nGpioNum)) != __OUT__ ) {
-        printk(KERN_DEBUG "[%s:%4d:%s] GPIO%d_%d direction is not out, can not set value. \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum);
-        return -1;
-    }
-
-    unRegVal = ioread32(iomem + GPIO_DATAOUT);
-
-    //unRegVal |= (nLowHi << nGpioNum);
-    if(nLowHi == __LO__)
-        BIT_CLR(unRegVal, nGpioNum);
-    else if(nLowHi == __HI__)
-        BIT_SET(unRegVal, nGpioNum);
-
-    iowrite32(unRegVal, iomem + GPIO_DATAOUT);
-
-    if(g_nDbgMsgFlag == __ON__) {
-        printk(KERN_DEBUG "[%s:%4d:%s] GPIO%d_%d set value > %s *** \n",
-            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, (nLowHi == __LO__ ? "Low(0)" : "Hi(1)"));
-        BitsDisplayU32(unRegVal);
-    }
-    else {        
-        if(g_nToggleReset == __ON__)
-        {
-            mdelay(2);
-        }
-    }
-    */
+	// NOTE::2023-07-11
+	// (참고) https://www.kernel.org/doc/html/v5.10/driver-api/gpio/legacy.html
+	int nGpioNumLUT = GetGpioLUT(nGpioInstanceNum, nGpioNum);
+	if(nGpioNumLUT <= 0) {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
+	
+	if(nDirection == __OUT__) {
+		gpio_direction_output(nGpioNumLUT, __LO__);
+	}
+	else if(nDirection == __IN__) {
+		gpio_direction_input(nGpioNumLUT);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
 #else
-	// API 사용 시 레지스터를 직접 제어하는 것에 비해 느림
-    gpio_set_value(GPIO_TO_PIN(nGpioBank, nGpioNum), nLowHi);
-#endif
+    void __iomem *iomem;
+	unsigned int unRegVal = 0;
+	unsigned int unOffset = 0;
 
+	int nGpioBank = GetGpioBankNum(nGpioNum);
+	int nGpioRegBit = GetGpioRegBit(nGpioNum);
+
+	//TRM P.8781 - 12.2.5.1 GPIO Registers
+	//Table 12-366. mem, GPIO0_ Registers, Base Address=0060 0000H, Length=256
+	if(nGpioInstanceNum == 0) {
+		iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
+	} 
+	else if(nGpioInstanceNum == 1) {
+		iomem = ioremap(CSL_GPIO1_BASE, CSL_GPIO1_SIZE);	// 0x60_1000
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
+
+	if(!iomem) {
+        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_GPIO#_BASE.\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+        return -1;
+    }
+	
+	unOffset = 0x10;	// GPIO_DIR01
+	if(nGpioBank == 0 || nGpioBank == 1) {
+		unOffset += (0x28 * 0);
+	}
+	else if(nGpioBank == 2 || nGpioBank == 3) {
+		unOffset += (0x28 * 1);
+	}
+	else if(nGpioBank == 4 || nGpioBank == 5) {
+		unOffset += (0x28 * 2);
+	}
+	else if(nGpioBank == 6 || nGpioBank == 7) {
+		unOffset += (0x28 * 3);
+	}
+	else if(nGpioBank == 8) {
+		unOffset += (0x28 * 4);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		iounmap(iomem);
+		return -1;
+	}
+
+	unRegVal = ioread32(iomem + unOffset);
+
+	// TRM P.8786 - 12.2.5.1.4.1 GPIO0_DIR01 Register (Offset = 10h) [reset = ffffffffh]
+	// Direction of GPIO bank 1 bits, 0 = output, 1 = input.
+	if(nDirection == __OUT__) {
+		BIT_CLR(unRegVal, nGpioRegBit);
+	}
+	else if(nDirection == __IN__) {
+		BIT_SET(unRegVal, nGpioRegBit);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		iounmap(iomem);
+		return -1;
+	}
+	
+	iowrite32(unRegVal, iomem + unOffset);
+	iounmap(iomem);
+#endif
 
     return 0;
 }
 
-
-static int ToggleGpioPin(int nGpioBank, int nGpioNum, int nTime)
+static int GetGpioValue(int nGpioInstanceNum, int nGpioNum)
 {
-    int nRet = 0;
-    int nVal = 0;
-    unsigned long ulEndTime = 0;
+	int nRet = -1;
+    void __iomem *iomem;
+	unsigned int unRegVal = 0;
+	unsigned int unOffset = 0;
 
-    int nIsDirectionChanged = __NO__;
+	int nGpioBank = GetGpioBankNum(nGpioNum);
+	int nGpioRegBit = GetGpioRegBit(nGpioNum);
 
-    if(GetGpioDirection(nGpioBank, nGpioNum) != __OUT__) {
-        SetGpioDirection(nGpioBank, nGpioNum, __OUT__);
-        nIsDirectionChanged = __YES__;
+	//TRM P.8781 - 12.2.5.1 GPIO Registers
+	//Table 12-366. mem, GPIO0_ Registers, Base Address=0060 0000H, Length=256
+	if(nGpioInstanceNum == 0) {
+		iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
+	} 
+	else if(nGpioInstanceNum == 1) {
+		iomem = ioremap(CSL_GPIO1_BASE, CSL_GPIO1_SIZE);	// 0x60_1000
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
+
+	if(!iomem) {
+        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_GPIO#_BASE.\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+        return -1;
     }
+	
+	unOffset = 0x14;	// GPIO_OUT_DATA01
+	//unOffset = 0x18;	// GPIO_SET_DATA01
+	//unOffset = 0x1c;	// GPIO_CLR_DATA01
+	//unOffset = 0x20;	// GPIO_IN_DATA01
+	if(nGpioBank == 0 || nGpioBank == 1) {
+		unOffset += (0x28 * 0);
+	}
+	else if(nGpioBank == 2 || nGpioBank == 3) {
+		unOffset += (0x28 * 1);
+	}
+	else if(nGpioBank == 4 || nGpioBank == 5) {
+		unOffset += (0x28 * 2);
+	}
+	else if(nGpioBank == 6 || nGpioBank == 7) {
+		unOffset += (0x28 * 3);
+	}
+	else if(nGpioBank == 8) {
+		unOffset += (0x28 * 4);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		iounmap(iomem);
+		return -1;
+	}
 
-    nVal = GetGpioValue(nGpioBank, nGpioNum);
-//    nVal = gpio_get_value((32*nGpioBank)+nGpioNum);
+	unRegVal = ioread32(iomem + unOffset);
+	iounmap(iomem);
 
-    switch(nVal)
-    {
-        case __LO__:        nRet = SetGpioValue(nGpioBank, nGpioNum, __HI__);        break;
-        case __HI__:        nRet = SetGpioValue(nGpioBank, nGpioNum, __LO__);        break;
-//        case __LO__:        gpio_set_value(((32*nGpioBank)+nGpioNum), __HI__);       break;
-//        case __HI__:        gpio_set_value(((32*nGpioBank)+nGpioNum), __LO__);       break;
+	nRet = BITS_EXTRACT(BIT_CHECK(unRegVal, nGpioRegBit), 1, nGpioRegBit);
 
-        default:
-            printk(KERN_ERR "[%s:%4d:%s] Wrong GPIO%d_%d value: %d \n",
-                __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, nVal);
-            nRet = -1;
-            break;
-    }
-
-    if(nRet >= 0 && nTime > 0)
-	{
-#if 0
-        if( (nTime > 0) && (nTime < 1000) ) {
-            udelay(nTime);
-        }
-        else if( (nTime >= 1000) && (nTime <= 5000) ) {
-            mdelay(nTime / 1000);
-        }
-        else {
-            printk(KERN_ERR "[%s:%4d:%s] Wrong GPIO%d_%d toggle delay time: %d \n",
-                __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, nTime);
-        }
-#else
-        // Delay N ms
-        ulEndTime = get_jiffies_64() + ((HZ/1000)*nTime);
-        while(jiffies < ulEndTime);
-#endif
-
-        nRet = SetGpioValue(nGpioBank, nGpioNum, nVal);
-//        gpio_set_value(((32*nGpioBank)+nGpioNum), nVal);
-    }
-
-    if(nIsDirectionChanged == __YES__)
-        SetGpioDirection(nGpioBank, nGpioNum, __IN__);
+	//printk(KERN_DEBUG "[%s:%4d] Offset(0x%x), RegVal(0x%x), RegBit(%d), Ret(%d)\n", 
+	//	__FILENAME__, __LINE__, unOffset, unRegVal, nGpioRegBit, nRet);
 
     return nRet;
 }
 
-
-static int EnableClockGpioBank(int nBankNum)
+static int SetGpioValue(int nGpioInstanceNum, int nGpioNum, int nLowHi)
 {
-	unsigned int unOffset = 0x0;
-//	unsigned int unRegVal = 0x0;
-
-
-	switch(nBankNum)
-	{
-		/*
-			TRM 404 L4_WKUP Memory Map
-			GPIO1	TP_GPIO1_TARG	0x4ae1_0000 	4 KB
-		
-			TRM 459, 472
-			Clock Domain : CD_WKUPAON
-		
-			TRM 1596
-			CM_WKUPAON_GPIO1_CLKCTRL	Offset(0x38),	PhyAddr(0x4ae0_7838)	// CSL_MPU_WKUPAON_CM_REGS
-		*/
-		case 1:
-			{
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO1\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x38;
 #if 1
-				iowrite32(0x01, g_ptrCM_REGS_WKUPAON + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_WKUPAON + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_WKUPAON + unOffset); 
-#endif
-			}
-			break;
-
-		
-		/*
-		 TRM Pg. 1072, 1073, 1074, 1075
-		
-		 Table 3-1113. CM_L4PER_GPIO2_CLKCTRL: Offset(0x60), Physical Address(0x4A00_9760)
-		 Table 3-1115. CM_L4PER_GPIO3_CLKCTRL: Offset(0x68), Physical Address(0x4A00_9768)
-		 Table 3-1117. CM_L4PER_GPIO4_CLKCTRL: Offset(0x70), Physical Address(0x4A00_9770)
-		 Table 3-1119. CM_L4PER_GPIO5_CLKCTRL: Offset(0x78), Physical Address(0x4A00_9778)
-		 Table 3-1121. CM_L4PER_GPIO6_CLKCTRL: Offset(0x80), Physical Address(0x4A00_9770)
-		 Table 3-1155. CM_L4PER_GPIO7_CLKCTRL: Offset(0x110), Physical Address(0x4A00_9810)
-		 Table 3-1157. CM_L4PER_GPIO8_CLKCTRL: Offset(0x118), Physical Address(0x4A00_9818)
-			 
-		 Enable GPIO 2~8 clock
-		*/
-		case 2:
-			{
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO2\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x60;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset);
-#endif
-			}
-			break;
-		case 3:
-			{
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO3\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x68;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset); 
-#endif
-			}
-			break;
-		case 4:
-			{						
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO4\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x70;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset); 
-#endif
-			}
-			break;
-		case 5:
-			{
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO5\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x78;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset); 
-#endif
-			}
-			break;
-		case 6:
-			{
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO6\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x80;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset); 
-#endif
-			}
-			break;
-		case 7:
-			{		
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO7\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x110;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset); 
-#endif
-			}
-			break;
-		case 8:
-			{
-//				printk(KERN_DEBUG "[%s:%4d:%s] Trying to enable clock: GPIO8\n", __FILENAME__, __LINE__, __FUNCTION__);
-				unOffset = 0x118;
-#if 1
-				iowrite32(0x01, g_ptrCM_REGS_L4PER + unOffset);
-#else
-				unRegVal = ioread32 (g_ptrCM_REGS_L4PER + unOffset);
-//				BitsDisplayU32(unRegVal);
-				BIT_SET(unRegVal,  0);
-				BIT_CLR(unRegVal,  1);
-				BIT_CLR(unRegVal, 16);
-				BIT_CLR(unRegVal, 17);
-//				BitsDisplayU32(unRegVal);
-				iowrite32 (unRegVal, g_ptrCM_REGS_L4PER + unOffset); 
-#endif
-			}
-			break;		
-
-		default:			
-			printk(KERN_ERR "[%s:%4d:%s] Unhandled GPIO Bank: %d !\n", __FILENAME__, __LINE__, __FUNCTION__, nBankNum);
-			break;
+	// NOTE::2023-07-11
+	// (참고) https://www.kernel.org/doc/html/v5.10/driver-api/gpio/legacy.html
+	int nGpioNumLUT = GetGpioLUT(nGpioInstanceNum, nGpioNum);
+	if(nGpioNumLUT <= 0) {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
 	}
+
+	if(nLowHi == __LO__ || nLowHi == __HI__) {
+		gpio_set_value(nGpioNumLUT, nLowHi);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
+#else
+    void __iomem *iomem;
+	unsigned int unRegVal = 0;
+	unsigned int unOffset = 0;
+
+	int nGpioBank = GetGpioBankNum(nGpioNum);
+	int nGpioRegBit = GetGpioRegBit(nGpioNum);
+
+	//TRM P.8781 - 12.2.5.1 GPIO Registers
+	//Table 12-366. mem, GPIO0_ Registers, Base Address=0060 0000H, Length=256
+	if(nGpioInstanceNum == 0) {
+		iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
+	} 
+	else if(nGpioInstanceNum == 1) {
+		iomem = ioremap(CSL_GPIO1_BASE, CSL_GPIO1_SIZE);	// 0x60_1000
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
+	}
+
+	if(!iomem) {
+        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_GPIO#_BASE.\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+        return -1;
+    }
+	
+	if(nLowHi == __HI__) {
+		unOffset = 0x18;	// GPIO_SET_DATA01
+	}
+	else if(nLowHi == __LO__) {
+		unOffset = 0x1c;	// GPIO_CLR_DATA01
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		iounmap(iomem);
+		return -1;
+	}
+	
+	if(nGpioBank == 0 || nGpioBank == 1) {
+		unOffset += (0x28 * 0);
+	}
+	else if(nGpioBank == 2 || nGpioBank == 3) {
+		unOffset += (0x28 * 1);
+	}
+	else if(nGpioBank == 4 || nGpioBank == 5) {
+		unOffset += (0x28 * 2);
+	}
+	else if(nGpioBank == 6 || nGpioBank == 7) {
+		unOffset += (0x28 * 3);
+	}
+	else if(nGpioBank == 8) {
+		unOffset += (0x28 * 4);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		iounmap(iomem);
+		return -1;
+	}
+
+	if(nLowHi == __HI__) {
+		unRegVal = ioread32(iomem + unOffset);
+	}
+	else if(nLowHi == __LO__) {
+		unRegVal = 0;
+	}
+
+/*	
+	printk(KERN_DEBUG "[%s:%4d] Offset(0x%x), RegVal(0x%x), RegBit(%d)\n", 
+		__FILENAME__, __LINE__, unOffset, unRegVal, nGpioRegBit);
+	BitsDisplayU32(unRegVal);
+*/
+
+	BIT_SET(unRegVal, nGpioRegBit);
+
+/*
+	BitsDisplayU32(unRegVal);
+	printk(KERN_DEBUG "[%s:%4d] Offset(0x%x), RegVal(0x%x), RegBit(%d)\n", 
+		__FILENAME__, __LINE__, unOffset, unRegVal, nGpioRegBit);
+*/
+
+	iowrite32(unRegVal, iomem + unOffset);
+	iounmap(iomem);
+#endif
 
 	return 0;
 }
 
-static int InitGpioRegisterValues(void)
+static int ToggleGpioPin(int nGpioBank, int nGpioNum, int nMilliSec)
 {
-	//int i = 0;
+    int nRet = 0;
+    int nVal = GetGpioValue(nGpioBank, nGpioNum);
 
-#if 0
-	g_ptrCM_REGS_WKUPAON = ioremap(CSL_MPU_WKUPAON_CM_REGS, CSL_MPU_WKUPAON_CM_SIZE);
-	if(!g_ptrCM_REGS_WKUPAON) {
-	  printk (KERN_ERR "[%s:%4d:%s] Failed to remap memory for CSL_MPU_WKUPAON_CM_REGS.\n",
-		__FILENAME__, __LINE__, __FUNCTION__);
-//	  return -1;
+    if(nVal == __LO__) {
+		nRet = SetGpioValue(nGpioBank, nGpioNum, __HI__);
+	}
+	else if(nVal == __HI__) {
+		nRet = SetGpioValue(nGpioBank, nGpioNum, __LO__);
+	}
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] GPIO%d_%d: %d ???\n",
+            __FILENAME__, __LINE__, __FUNCTION__, nGpioBank, nGpioNum, nVal);
+		return -1;
+	}
+	
+	if(nRet >= 0 && nMilliSec > 0) {
+        schedule_timeout_interruptible((nMilliSec * HZ) / 1000);
+        nRet = SetGpioValue(nGpioBank, nGpioNum, nVal);
+    }
+	else {
+		printk (KERN_ERR "[%s:%4d:%s] TRACE:\n",
+            __FILENAME__, __LINE__, __FUNCTION__);
+		return -1;
 	}
 
-	g_ptrCM_REGS_L4PER = ioremap(CSL_MPU_L4PER_CM_CORE_REGS, CSL_MPU_L4PER_CM_CORE_SIZE);
-	if(!g_ptrCM_REGS_L4PER) {
-	  printk (KERN_ERR "[%s:%4d:%s] Failed to remap memory for CSL_MPU_L4PER_CM_CORE_REGS.\n",
-		__FILENAME__, __LINE__, __FUNCTION__);
-//	  return -1;
-	}
-			
-
-	for(i = 1 ; i <= 8 ; i++)
-	{
-		EnableClockGpioBank(i);
-	}
-
-
-	/*	 
- 	 TRM Pg. 7109 ~ 7111
-	*/
-    g_ptrGpioBase1 = ioremap(CSL_MPU_GPIO1_REGS, CSL_MPU_GPIO1_SIZE);
-    if(!g_ptrGpioBase1) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase1.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-
-    /*
-	 TRM Pg. 1072, 1073, 1074, 1075
-
-	 Table 3-1113. CM_L4PER_GPIO2_CLKCTRL: Offset(0x60), Physical Address(0x4A00_9760)
-	 Table 3-1115. CM_L4PER_GPIO3_CLKCTRL: Offset(0x68), Physical Address(0x4A00_9768)
-	 Table 3-1117. CM_L4PER_GPIO4_CLKCTRL: Offset(0x70), Physical Address(0x4A00_9770)
-	 Table 3-1119. CM_L4PER_GPIO5_CLKCTRL: Offset(0x78), Physical Address(0x4A00_9778)
-	 Table 3-1121. CM_L4PER_GPIO6_CLKCTRL: Offset(0x80), Physical Address(0x4A00_9770)
- 	 Table 3-1155. CM_L4PER_GPIO7_CLKCTRL: Offset(0x110), Physical Address(0x4A00_9810)
-	 Table 3-1157. CM_L4PER_GPIO8_CLKCTRL: Offset(0x118), Physical Address(0x4A00_9818)
-	 	 
-     Enable GPIO 2~8 clock
-    */
-		
-    g_ptrGpioBase2 = ioremap(CSL_MPU_GPIO2_REGS, CSL_MPU_GPIO2_SIZE);
-    if(!g_ptrGpioBase2) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase2.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-    g_ptrGpioBase3 = ioremap(CSL_MPU_GPIO3_REGS, CSL_MPU_GPIO3_SIZE);
-    if(!g_ptrGpioBase3) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase3.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-    g_ptrGpioBase4 = ioremap(CSL_MPU_GPIO4_REGS, CSL_MPU_GPIO4_SIZE);
-    if(!g_ptrGpioBase4) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase4.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-    g_ptrGpioBase5 = ioremap(CSL_MPU_GPIO5_REGS, CSL_MPU_GPIO5_SIZE);
-    if(!g_ptrGpioBase5) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase5.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-    g_ptrGpioBase6 = ioremap(CSL_MPU_GPIO6_REGS, CSL_MPU_GPIO6_SIZE);
-    if(!g_ptrGpioBase6) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase6.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-    g_ptrGpioBase7 = ioremap(CSL_MPU_GPIO7_REGS, CSL_MPU_GPIO7_SIZE);
-    if(!g_ptrGpioBase7) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase7.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-    g_ptrGpioBase8 = ioremap(CSL_MPU_GPIO8_REGS, CSL_MPU_GPIO8_SIZE);
-    if(!g_ptrGpioBase8) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap g_ptrGpioBase8.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    } 
-
-#endif
-    return 0;
+    return nRet;
 }
-
 
 static int kisan_gpio_handler_open(struct inode *inode, struct file *file)
 {
@@ -699,13 +757,11 @@ static int kisan_gpio_handler_open(struct inode *inode, struct file *file)
     return 0;
 }
 
-
 static ssize_t kisan_gpio_handler_read(struct file *filp, char *buf, size_t count, loff_t *f_pos)
 {
     printk(KERN_DEBUG "[%s:%4d:%s] \n", __FILENAME__, __LINE__, __FUNCTION__);
     return 0;
 } 
-
 
 static ssize_t kisan_gpio_handler_write(struct file *filp, const char __user *buf,
 		size_t count, loff_t *f_pos)
@@ -713,7 +769,6 @@ static ssize_t kisan_gpio_handler_write(struct file *filp, const char __user *bu
     printk(KERN_DEBUG "[%s:%4d:%s] \n", __FILENAME__, __LINE__, __FUNCTION__);
 	return 0;
 }
-
 
 static long kisan_gpio_handler_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 {
@@ -732,22 +787,6 @@ static long kisan_gpio_handler_ioctl(struct file *filp, unsigned int cmd, unsign
 //    if(g_nDbgMsgFlag == __ON__) {
 //        printk(KERN_DEBUG "[%s:%4d:%s] DbgMsg is ON. \n", __FILENAME__, __LINE__, __FUNCTION__);
 //    }
-
-    // Reset Flag For CPU Toggle
-    g_nToggleReset = __OFF__;
-
-
-	/*
-	// NOTE::20210705
-	// Userspace 에서 GPIO 2, 4, 5, 8 접근 시 아래의 커널 에러 발생
-		...
-		[  121.554350] WARNING: CPU: 0 PID: 845 at drivers/bus/omap_l3_noc.c:147 l3_interrupt_handler+0x330/0x380
-		[  121.563711] 44000000.ocp:L3 Custom Error: MASTER MPU TARGET L4_PER1_P3 (Read): Data Access in User mode during Functional access
-		...
-	*/
-
-/*
-	EnableClockGpioBank(stGpioHandler.nGpioBank);
 
     switch(nCmdType)
     {
@@ -774,13 +813,6 @@ static long kisan_gpio_handler_ioctl(struct file *filp, unsigned int cmd, unsign
             break;
 
         case CMD_TYPE_GPIO_HANDLER_TOGGLE_PIN:
-            if(((stGpioHandler.nGpioBank == 3) && (stGpioHandler.nGpioNum == 31))        // Reset GPIO FPGA_N	(NOTE::20210705, S2 System B/D V01 기준)
-                || ((stGpioHandler.nGpioBank == 3) && (stGpioHandler.nGpioNum == 5))     // Reset GPIO FPGA_T	(NOTE::20210705, S2 System B/D V01 기준)
-                ) 
-            {
-                g_nToggleReset = __ON__;
-            }
-            
             if( (ToggleGpioPin(stGpioHandler.nGpioBank, stGpioHandler.nGpioNum, stGpioHandler.nCmdData)) < 0 ) {
                 printk(KERN_DEBUG "[%s:%4d:%s] %d %d %d\n", __FILENAME__, __LINE__, __FUNCTION__,
                     stGpioHandler.nGpioBank, stGpioHandler.nGpioNum, stGpioHandler.nCmdData);
@@ -794,10 +826,9 @@ static long kisan_gpio_handler_ioctl(struct file *filp, unsigned int cmd, unsign
             return -EINVAL;
             break;
     }
-*/
+
     return 0;
 }
-
 
 static struct file_operations kisan_gpio_handler_fops = {
 	.owner   		= THIS_MODULE,
@@ -808,202 +839,6 @@ static struct file_operations kisan_gpio_handler_fops = {
     .unlocked_ioctl = kisan_gpio_handler_ioctl,
 //	.fasync 		= kisan_gpio_handler_fasync,
 };
-
-
-static void TestGpio(void)
-{
-/*
-	// NOTE::2023-05-17
-	// GPIO 작업 시 확인해야 할 문서
-
-	Datasheet P.18 ~
-		Pin Attributes
-	Datasheet P.63 ~
-		GPIO# Signal Descriptions
-
-	TRM P.34 
-		Memory Map
-			PADCFG_CTRL0_CFG0 : 0x000F0000
-			GPIO0 : 0x00600000
-			GPIO1 : 0x00601000
-
-	TRM P.3645~~ 
-		6.1.2.3 Pad Configuration Ball Names
-			TX_DIS bit (TRM P.3643, 3644)
-				0=Driver is enabled, 1=Driver is disabled
-
-	TRM P.2375 ~
-		4.7.1.4 GPIO Register / Pin Mapping
-
-	TRM P.8781 ~
-		12.2.5.1 GPIO Registers
-			GPIO_DIR01
-			GPIO_SET_DATA01
-			GPIO_CLR_DATA01
-
-*/
-
-/*
-	// NOTE::2023-05-17
-	// gpio 할당 번호 / 상태 확인
-	root@am62xx-evm:~# cat /sys/kernel/debug/gpio
-	gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio:
-	gpio-318 (                    |enable              ) out lo
-
-	gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio:
-	gpio-431 (                    |regulator-3         ) out lo
-	gpio-441 (                    |tps65219-LDO1-SEL-SD) out lo
-
-	gpiochip1: GPIOs 486-509, parent: platform/4201000.gpio, 4201000.gpio:
-
-	gpiochip0: GPIOs 510-511, parent: platform/3b000000.memory-controller, omap-gpmc:
-
-	// NOTE::2023-05-17
-	// sysfs 에서 gpio handling 시 경로 참고
-	root@am62xx-evm:~# ll /sys/class/gpio/
-	total 0
-	drwxr-xr-x  2 root root    0 Jan  1  1970 .
-	drwxr-xr-x 66 root root    0 Jan  1  1970 ..
-	--w-------  1 root root 4096 Jan  1  1970 export
-	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip311 -> ../../devices/platform/bus@f0000/601000.gpio/gpio/gpiochip311
-	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip399 -> ../../devices/platform/bus@f0000/600000.gpio/gpio/gpiochip399
-	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip486 -> ../../devices/platform/bus@f0000/bus@f0000:bus@4000000/4201000.gpio/gpio/gpiochip486
-	lrwxrwxrwx  1 root root    0 Jan  1  1970 gpiochip510 -> ../../devices/platform/bus@f0000/3b000000.memory-controller/gpio/gpiochip510
-	--w-------  1 root root 4096 Jan  1  1970 unexport
-
-	// NOTE::2023-05-17
-	// gpio0_11 상태 변경 시 예시
-	#gpio0_11 (AM6232_STATUS_LED1)
-	echo 410 > /sys/class/gpio/export
-	echo out > /sys/class/gpio/gpio410/direction
-	echo 0 > /sys/class/gpio/gpio410/value
-*/
-
-#if 0
-	// NOTE::2023-05-17
-	// 커널 빌트인으로 이미지에 탑재하여 실행하면 동작하지 않고,
-	// 커널 모듈로 Init Process 에서 실행해야만 동작하는 이슈가 있음
-
-	int nIrq = 0;
-	int i = 0;
-
-	for(i = 310 ; i < 512 ; i++)
-	{
-		if(gpio_is_valid(i))
-		{
-			//if(gpio_request_one(i, GPIOF_IN, "TEST") < 0)
-			if(devm_gpio_request(&pdev->dev, i, "TEST") < 0)
-			{
-				printk(KERN_ERR "[%s:%4d] Failed to gpio(%d)_request...\n", __FILENAME__, __LINE__, i);
-				continue;
-			}
-
-			nIrq = gpio_to_irq(i);
-			if (nIrq < 0)
-			{
-				printk(KERN_ERR "[%s:%4d] Failed to gpio(%d)_to_irq(%d).\n", __FILENAME__, __LINE__, i, nIrq);
-			}
-			else
-			{
-				printk(KERN_ERR "[%s:%4d] ***********************************gpio(%d)_to_irq(%d).\n", __FILENAME__, __LINE__, i, nIrq);
-			}	
-		}
-		else
-		{
-			printk(KERN_ERR "[%s:%4d] Failed to gpio(%d)_is_valid.\n", __FILENAME__, __LINE__, i);
-		}
-	}
-#endif	// #if 0
-
-#if 0
-	// NOTE::2023-05-17
-	// 디바이스 트리에서 Pinmux 시, 실행할 필요 없음
-	unsigned int unRegVal = 0x00000000;
-    void __iomem *iomem = NULL;
-
-	iomem = ioremap(CSL_PADCFG_CTRL0_CFG0_BASE, CSL_PADCFG_CTRL0_CFG0_SIZE);	// 0xf_0000
-    if(!iomem) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_PADCFG_CTRL0_CFG0_BASE.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-	else
-	{
-		unRegVal = ioread32(iomem + 0x4004);
-		printk(KERN_ERR "[%s:%s:%d] GPIO0_1 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-		BIT_CLR(unRegVal, 21);	// TX_DIS
-
-		iowrite32(unRegVal, iomem + 0x4004);
-		unRegVal = ioread32(iomem + 0x4004);
-		printk(KERN_ERR "[%s:%s:%d] GPIO0_1 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-
-		unRegVal = ioread32(iomem + 0x402c);
-		printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-		//BIT_CLR(unRegVal, 21);	// TX_DIS
-
-		unRegVal = 0x08014007;
-
-		iowrite32(unRegVal, iomem + 0x402c);
-		unRegVal = ioread32(iomem + 0x402c);
-		printk(KERN_ERR "[%s:%s:%d] GPIO0_11 PADCFG: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-
-		iowrite32(unRegVal, iomem + 0x4034);
-		iowrite32(unRegVal, iomem + 0x4038);
-		iowrite32(unRegVal, iomem + 0x4114);
-		
-		iounmap(iomem);
-	}
-
-	iomem = ioremap(CSL_GPIO0_BASE, CSL_GPIO0_SIZE);	// 0x60_0000
-    if(!iomem) {
-        printk (KERN_ERR "[%s:%4d:%s] Failed to ioremap CSL_GPIO0_BASE.\n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-//        return -1;
-    }
-	else
-	{
-	/*
-		unRegVal = ioread32(iomem + CSL_GPIO_DIR(0));
-		printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-		BIT_CLR(unRegVal, 11);	//GPIO0_11
-		BIT_CLR(unRegVal, 13);	//GPIO0_13
-		BIT_CLR(unRegVal, 14);	//GPIO0_14
-		iowrite32(unRegVal, iomem + CSL_GPIO_DIR(0));
-		printk(KERN_ERR "[%s:%s:%d] GPIO0_DIR01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-	*/
-		
-		// NOTE::2023-05-17
-		// STATUS LED 켜기 테스트
-	//	for(i = 0 ; i < 3 ; i ++)
-	//	{
-			unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
-			printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-			BIT_SET(unRegVal, 11);	//GPIO0_11
-			BIT_SET(unRegVal, 13);	//GPIO0_13
-			BIT_SET(unRegVal, 14);	//GPIO0_14
-			iowrite32(unRegVal, iomem + CSL_GPIO_SET_DATA(0));
-			unRegVal = ioread32(iomem + CSL_GPIO_SET_DATA(0));
-			printk(KERN_ERR "[%s:%s:%d] GPIO_SET_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-
-			mdelay(1000);
-
-			unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
-			printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-			BIT_SET(unRegVal, 11);	//GPIO0_11
-			BIT_SET(unRegVal, 13);	//GPIO0_13
-			BIT_SET(unRegVal, 14);	//GPIO0_14
-			iowrite32(unRegVal, iomem + CSL_GPIO_CLR_DATA(0));
-			unRegVal = ioread32(iomem + CSL_GPIO_CLR_DATA(0));
-			printk(KERN_ERR "[%s:%s:%d] GPIO_CLR_DATA01: 0x%08x\n", __FILENAME__, __FUNCTION__, __LINE__, unRegVal);
-
-	//		mdelay(1000);
-	//	}
-
-		iounmap(iomem);
-	}
-#endif	// #if 0
-}
-
 
 static int kisan_gpio_handler_probe(struct platform_device *pdev)
 {
@@ -1036,16 +871,7 @@ static int kisan_gpio_handler_probe(struct platform_device *pdev)
  	// platform_device 에 사용할 고유의 구조체 설정
 	platform_set_drvdata(pdev, pdata);
 
-
-    //TestGpio();
-
-/*
-    if( (InitGpioRegisterValues()) < 0 ) {
-        printk(KERN_ERR "[%s:%4d:%s] Failed to InitGpioRegisterValues \n",
-            __FILENAME__, __LINE__, __FUNCTION__);
-        return -ENOMEM;
-    }
-*/
+	SetGpioLUT();
 
 	printk(KERN_DEBUG "[%s:%4d] Registered kisan_gpio_handler char driver. \n",
 			__FILENAME__, __LINE__);
@@ -1056,20 +882,6 @@ static int kisan_gpio_handler_probe(struct platform_device *pdev)
 static int kisan_gpio_handler_remove(struct platform_device *pdev)
 {
 	struct StructKisanGpioHandlerData *pdata = platform_get_drvdata(pdev);
-
-/*
-    iounmap(g_ptrCM_REGS_WKUPAON);
-    iounmap(g_ptrCM_REGS_L4PER);
-
-    iounmap(g_ptrGpioBase1);
-    iounmap(g_ptrGpioBase2);
-    iounmap(g_ptrGpioBase3);
-    iounmap(g_ptrGpioBase4);
-    iounmap(g_ptrGpioBase5);
-    iounmap(g_ptrGpioBase6);
-    iounmap(g_ptrGpioBase7);
-    iounmap(g_ptrGpioBase8);
-*/
 
 	misc_deregister(&pdata->mdev);
 	devm_kfree(&pdev->dev, pdata);
@@ -1090,7 +902,6 @@ static int kisan_gpio_handler_resume(struct platform_device *pdev)
 	printk(KERN_DEBUG "[%s:%4d:%s]\n", __FILENAME__, __LINE__, __FUNCTION__);
 	return 0;
 }
-
 
 #if IS_ENABLED(CONFIG_OF)  
 static const struct of_device_id kisan_gpio_handler_dt_ids[] = {  

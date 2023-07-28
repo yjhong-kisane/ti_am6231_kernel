@@ -28,7 +28,11 @@
 		device_type = "memory";
 		/* 2G RAM */
 		reg = <0x00000000 0x80000000 0x00000000 0x80000000>;
-
+	};
+	
+	cpus {
+		/delete-node/ cpu@2;
+		/delete-node/ cpu@3;
 	};
 
 	reserved-memory {
@@ -291,15 +295,38 @@
 
 		mode = <0>;
 		gpio-key-fpga = <0>;	// 2023-05-17 현재 미사용
-		//gpio-key-fpga = <399>;	// H24 CPU_BOARD_VER0 (GPIO0_0) 임시 테스트
+		
+		// NOTE::2023-07-06
+		// (참고) https://github.com/yjhong-kisane/ti_am62x_maintenance_S1P/tree/main/documentation
+		/*
+		 * gpiochip3: GPIOs 311-398, parent: platform/601000.gpio, 601000.gpio: GPIO1_0 ~ GPIO1_51
+		 * gpiochip2: GPIOs 399-485, parent: platform/600000.gpio, 600000.gpio: GPIO0_0 ~ GPIO0_86
+		 * gpiochip1: GPIOs 486-509, parent: platform/4201000.gpio, 4201000.gpio: MCU_GPIO0_0 ~ MCU_GPIO0_23
+		 */
 	};
 
 	kisan_gpio_handler {
 		compatible = "kisan_gpio_handler";
 		status = "okay";
 
+		mode = <0>;	// 미사용
+	};
+
+	kisan_usb_notifier {
+		compatible = "kisan_usb_notifier";
+		status = "okay";
+
+		mode = <0>;	// 미사용
+	};
+
+	kisan_board_s1p {
+		compatible = "kisan_board_s1p";
+		status = "okay";
+
 		pinctrl-names = "default";
-		pinctrl-0 = <&kisan_gpio_handler_pins_default>;
+		pinctrl-0 = <&kisan_board_s1p_pins_default>;
+		
+		mode = <0>;	// 미사용
 	};
 };
 
@@ -579,7 +606,7 @@
 		>;
 	};
 
-	kisan_gpio_handler_pins_default: kisan-gpio-handler-pins-default {
+	kisan_board_s1p_pins_default: kisan-board-s1p-pins-default {
 		pinctrl-single,pins = <
 			//AM62X_IOPAD(0x000, PIN_OUTPUT, 7) // (H24) GPIO0_0 (CPU_BOARD_VER0)
 			//AM62X_IOPAD(0x004, PIN_OUTPUT, 7) // (G25) GPIO0_1 (CPU_BOARD_VER1)
@@ -1170,4 +1197,9 @@
 &main_rti15 {	// watchdog@e0f0000
 	status = "disabled";
 	// Internal error: synchronous external abort: 96000010 [#1] PREEMPT SMP
+};
+
+&cluster0 {
+	/delete-node/ core2;
+	/delete-node/ core3;
 };

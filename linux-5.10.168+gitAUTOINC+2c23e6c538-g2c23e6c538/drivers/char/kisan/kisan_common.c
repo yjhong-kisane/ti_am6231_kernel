@@ -65,9 +65,8 @@ void BitsDisplay(int nVal, int nBitLen)
 {
     int i = 0;
     nBitLen--;
-
     for(i=nBitLen ; i >=0 ; i--)
-        printk(" [%2d] %d", i, BIT_CHECK(nVal, i)? 1:0);
+        printk(" [%2d] %d", i, BITS_EXTRACT(BIT_CHECK(nVal, i), 1, i));
 
     printk("\n");
 }
@@ -78,38 +77,38 @@ void BitsDisplayU32(unsigned int unVal)
 {
  	printk(" 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0\n");
 	printk("  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d  %d\n",
-		(BIT_CHECK(unVal, 31)? 1:0),
-		(BIT_CHECK(unVal, 30)? 1:0),
-		(BIT_CHECK(unVal, 29)? 1:0),
-		(BIT_CHECK(unVal, 28)? 1:0),
-		(BIT_CHECK(unVal, 27)? 1:0),
-		(BIT_CHECK(unVal, 26)? 1:0),
-		(BIT_CHECK(unVal, 25)? 1:0),
-		(BIT_CHECK(unVal, 24)? 1:0),
-		(BIT_CHECK(unVal, 23)? 1:0),
-		(BIT_CHECK(unVal, 22)? 1:0),
-		(BIT_CHECK(unVal, 21)? 1:0),
-		(BIT_CHECK(unVal, 20)? 1:0),
-		(BIT_CHECK(unVal, 19)? 1:0),
-		(BIT_CHECK(unVal, 18)? 1:0),
-		(BIT_CHECK(unVal, 17)? 1:0),
-		(BIT_CHECK(unVal, 16)? 1:0),
-		(BIT_CHECK(unVal, 15)? 1:0),
-		(BIT_CHECK(unVal, 14)? 1:0),
-		(BIT_CHECK(unVal, 13)? 1:0),
-		(BIT_CHECK(unVal, 12)? 1:0),
-		(BIT_CHECK(unVal, 11)? 1:0),
-		(BIT_CHECK(unVal, 10)? 1:0),
-		(BIT_CHECK(unVal,  9)? 1:0),
-		(BIT_CHECK(unVal,  8)? 1:0),
-		(BIT_CHECK(unVal,  7)? 1:0),
-		(BIT_CHECK(unVal,  6)? 1:0),
-		(BIT_CHECK(unVal,  5)? 1:0),
-		(BIT_CHECK(unVal,  4)? 1:0),
-		(BIT_CHECK(unVal,  3)? 1:0),
-		(BIT_CHECK(unVal,  2)? 1:0),
-		(BIT_CHECK(unVal,  1)? 1:0),
-		(BIT_CHECK(unVal,  0)? 1:0));
+		BITS_EXTRACT(BIT_CHECK(unVal, 31), 1, 31),
+		BITS_EXTRACT(BIT_CHECK(unVal, 30), 1, 30),
+		BITS_EXTRACT(BIT_CHECK(unVal, 29), 1, 29),
+		BITS_EXTRACT(BIT_CHECK(unVal, 28), 1, 28),
+		BITS_EXTRACT(BIT_CHECK(unVal, 27), 1, 27),
+		BITS_EXTRACT(BIT_CHECK(unVal, 26), 1, 26),
+		BITS_EXTRACT(BIT_CHECK(unVal, 25), 1, 25),
+		BITS_EXTRACT(BIT_CHECK(unVal, 24), 1, 24),
+		BITS_EXTRACT(BIT_CHECK(unVal, 23), 1, 23),
+		BITS_EXTRACT(BIT_CHECK(unVal, 22), 1, 22),
+		BITS_EXTRACT(BIT_CHECK(unVal, 21), 1, 21),
+		BITS_EXTRACT(BIT_CHECK(unVal, 20), 1, 20),
+		BITS_EXTRACT(BIT_CHECK(unVal, 19), 1, 19),
+		BITS_EXTRACT(BIT_CHECK(unVal, 18), 1, 18),
+		BITS_EXTRACT(BIT_CHECK(unVal, 17), 1, 17),
+		BITS_EXTRACT(BIT_CHECK(unVal, 16), 1, 16),
+		BITS_EXTRACT(BIT_CHECK(unVal, 15), 1, 15),
+		BITS_EXTRACT(BIT_CHECK(unVal, 14), 1, 14),
+		BITS_EXTRACT(BIT_CHECK(unVal, 13), 1, 13),
+		BITS_EXTRACT(BIT_CHECK(unVal, 12), 1, 12),
+		BITS_EXTRACT(BIT_CHECK(unVal, 11), 1, 11),
+		BITS_EXTRACT(BIT_CHECK(unVal, 10), 1, 10),
+		BITS_EXTRACT(BIT_CHECK(unVal,  9), 1,  9),
+		BITS_EXTRACT(BIT_CHECK(unVal,  8), 1,  8),
+		BITS_EXTRACT(BIT_CHECK(unVal,  7), 1,  7),
+		BITS_EXTRACT(BIT_CHECK(unVal,  6), 1,  6),
+		BITS_EXTRACT(BIT_CHECK(unVal,  5), 1,  5),
+		BITS_EXTRACT(BIT_CHECK(unVal,  4), 1,  4),
+		BITS_EXTRACT(BIT_CHECK(unVal,  3), 1,  3),
+		BITS_EXTRACT(BIT_CHECK(unVal,  2), 1,  2),
+		BITS_EXTRACT(BIT_CHECK(unVal,  1), 1,  1),
+		BITS_EXTRACT(BIT_CHECK(unVal,  0), 1,  0));
 }
 EXPORT_SYMBOL(BitsDisplayU32);
 
@@ -235,7 +234,7 @@ int ksocket_receive(struct socket* sock, struct sockaddr_in* addr, unsigned char
 }
 EXPORT_SYMBOL(ksocket_receive);
 
-
+/*
 int SaveUdpMsgToSharedMem(unsigned char *pucBuf, int nSaveDataLen)
 {
     void __iomem *iomemAddr;
@@ -259,7 +258,7 @@ int SaveUdpMsgToSharedMem(unsigned char *pucBuf, int nSaveDataLen)
     return 0;
 }
 EXPORT_SYMBOL(SaveUdpMsgToSharedMem);
-
+*/
 
 int SendUdpMsgToUserSpace(unsigned char *pucBuf, int nSendMsgLen)
 {

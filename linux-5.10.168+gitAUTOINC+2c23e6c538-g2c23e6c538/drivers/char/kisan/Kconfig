@@ -31,5 +31,19 @@ config KISAN_AM623x_GPIO_HANDLER
     help
        Kisan GPIO Handler Driver For AM623x.
 
+config KISAN_AM623x_USB_NOTIFIER
+    tristate "Kisan USB Notifier Driver For AM623x"
+    depends on (USB=y || USB=USB_MUSB_HDRC) && KISAN_AM623x_CHAR
+    default n
+    help
+       Kisan USB Notifier Driver For AM623x.
+
+config KISAN_AM623x_BOARD_S1P
+    tristate "Kisan Board S1P Driver For AM623x"
+    depends on KISAN_AM623x_CHAR
+    default n
+    help
+       Kisan Board S1P Driver For AM623x.
+
 endmenu
 
