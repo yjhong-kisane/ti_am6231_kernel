@@ -1,0 +1,41 @@
+NXP Software Content Register
+Release Date: April 2023
+
+
+Wi-Fi Linux driver, app and firmware release for W8801
+Outgoing License:          LA_OPT_NXP_Software_License v44 March 2023 - Additional Distribution Use - Section 2.3 applies
+License File:              COPYING
+Release Location:          NXP.com
+
+
+Package:                   USB-8801-U16-MMC-W14.68.36.p178-CS4X14709_R0-app-src	
+Outgoing License:          GNU General Public License v2.0 only
+License File:              gpl-2.0.txt
+Type of content:           Source Code
+Description and comments:  Wi-Fi Linux applications for W8801
+Origin:                    NXP (proprietary)
+
+
+Package:                   USB-8801-U16-MMC-W14.68.36.p178-CS4X14709_R0-mlan-src
+Outgoing License:          GNU General Public License v2.0 only
+License File:              gpl-2.0.txt
+Type of content:           Source Code
+Description and comments:  Wi-Fi Linux driver MLAN module for W8801
+Origin:                    NXP (proprietary)
+
+
+Package:                   USB-8801-U16-MMC-W14.68.36.p178-CS4X14709_R0-MGPL-src
+Outgoing License:          GNU General Public License v2.0 only
+License File:              gpl-2.0.txt
+Type of content:           Source Code
+Description and comments:  Wi-Fi Linux driver MOAL module for W8801
+Origin:                    NXP (proprietary)
+
+
+Package:                   USB-UAPSTA-8801-U16-X86-W14.68.36.p178_R0 (FwImage)
+Outgoing License:          LA_OPT_NXP_Software_License v44 March 2023 - Additional Distribution Use - Section 2.3 applies
+License File:              COPYING
+Type of content:           Binary
+Description and comments:  Wi-Fi firmware binaries for W8801
+Origin:                    NXP (proprietary)
+                           ThreadX licensed from Express Logic (Express Logic) - https://rtos.com/solutions/threadx/
