@@ -62,6 +62,9 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 	unsigned char *pucLogo;
 	unsigned char *pucClut;
 	unsigned char *pucData;
+	
+	unsigned int unPhyAddr = 0;
+	unsigned int unPhyLen = 0;
 
 	memset(&kisan_logo, 0x00, sizeof(struct linux_logo));
 
@@ -70,8 +73,19 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 	// AM6232 : 1G 기준 설정 리눅스 영역을 952MB (0x8000_0000 ~ 0xbb7f_ffff) 로 설정하여
 	// 바로 이어지는 0xbb80_0000 을 Boot Logo File DDR Physical Offset Address 로 설정함
 	
-	//pucLogo = (unsigned char *)ioremap(0xbb800000, 0x400000);   // 4MB (0xbb80_0000 ~ 0xbbbf_ffff) - 1GB DDR / 리눅스 952M 기준
-	pucLogo = (unsigned char *)ioremap(0xf6c00000, 0x400000);   // 4MB (0xf6c0_0000 ~ 0xf6ff_ffff) - 2GB DDR / 리눅스 1900M 기준
+	if(pfn_valid(__phys_to_pfn(0xbb800000)) == 0) {
+		// 0xbb80_0000 이 할당된 커널 영역에 포함 안되는 경우
+		// 4MB (0xbb80_0000 ~ 0xbbbf_ffff) - 1GB DDR / 리눅스 952M 기준 -> 계수기 보드
+		unPhyAddr = 0xbb800000;
+		unPhyLen = 0x400000;
+	}
+	else {
+		// 0xbb80_0000 이 할당된 커널 영역에 포함 되는 경우
+		// 4MB (0xf6c0_0000 ~ 0xf6ff_ffff) - 2GB DDR / 리눅스 1900M 기준 -> 입금기 보드
+		unPhyAddr = 0xf6c00000;
+		unPhyLen = 0x400000;
+	}
+	pucLogo = (unsigned char *)ioremap(unPhyAddr, unPhyLen);
 	pucClut = (unsigned char *)pucLogo + 16;
 	pucData = pucClut + (224 * 3);
 
@@ -95,8 +109,8 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 						((pucLogo[13] & 0xff) <<  8) |
 						(pucLogo[12] & 0xff));
 	
-	printk(KERN_DEBUG "[%s:%4d:%s] Kisan Boot Logo (%d x %d) \n",
-		__FILE__, __LINE__, __FUNCTION__, kisan_logo.width, kisan_logo.height);
+	printk(KERN_DEBUG "[%s:%4d:%s] Kisan Boot Logo (%d x %d) @ 0x%x \n",
+		__FILE__, __LINE__, __FUNCTION__, kisan_logo.width, kisan_logo.height, unPhyAddr);
 #else
 	const struct linux_logo *logo = NULL;
 #endif	// #if defined(KISAN_CUSTOM_BOOT_LOGO)
